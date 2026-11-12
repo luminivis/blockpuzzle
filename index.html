@@ -28,9 +28,11 @@
       * { box-sizing: border-box; }
 
       body {
-        min-width: 320px;
+        min-width: 0;
         min-height: 100vh;
+        min-height: 100dvh;
         margin: 0;
+        overflow-x: hidden;
         background:
           radial-gradient(ellipse at 50% 35%, rgb(101 111 65 / 8%), transparent 48%),
           var(--page);
@@ -42,29 +44,15 @@
       button { font: inherit; }
       button:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
 
-      .app-shell { width: min(100% - 40px, 1056px); margin: 0 auto; }
+      .app-shell { width: min(calc(100% - 40px), 1056px); margin: 0 auto; }
 
       .topbar {
         display: flex;
         align-items: center;
-        justify-content: space-between;
+        justify-content: flex-end;
         min-height: 82px;
         border-bottom: 1px solid rgb(255 255 255 / 6%);
       }
-
-      .brand { display: flex; align-items: center; gap: 12px; }
-      .brand-mark {
-        display: grid;
-        grid-template-columns: repeat(2, 9px);
-        grid-template-rows: repeat(2, 9px);
-        gap: 3px;
-        transform: rotate(-7deg);
-      }
-      .brand-mark i { display: block; border-radius: 2px; background: var(--accent); }
-      .brand-mark i:nth-child(2) { opacity: .7; }
-      .brand-mark i:nth-child(3) { opacity: .48; }
-      .brand-name { font-size: 15px; font-weight: 720; letter-spacing: -.035em; }
-      .brand-name span { color: var(--accent); }
 
       .top-actions { display: flex; align-items: center; gap: 10px; }
       .repo-link {
@@ -196,6 +184,9 @@
         border-radius: 12px;
         background: transparent;
         cursor: grab;
+        touch-action: none;
+        user-select: none;
+        -webkit-user-select: none;
         transition: background .16s ease, border-color .16s ease, transform .16s ease, opacity .16s ease;
       }
       .piece-button:active { cursor: grabbing; }
@@ -299,8 +290,13 @@
       .confirm-actions .reset-button { width: auto; min-height: 40px; padding: 0 13px; }
       .confirm-actions .confirm-new-game { border-color: #85934f80; color: var(--accent); }
 
+      @media (max-width: 930px) {
+        .app-shell { width: min(calc(100% - 40px), 620px); }
+        .game-layout { grid-template-columns: minmax(0, 1fr); }
+      }
+
       @media (max-width: 760px) {
-        .app-shell { width: min(100% - 28px, 560px); }
+        .app-shell { width: min(calc(100% - 28px), 560px); }
         .topbar { min-height: 68px; }
         main { padding: 28px 0 30px; }
         .game-layout { grid-template-columns: minmax(0, 1fr); gap: 12px; }
@@ -315,17 +311,36 @@
         .reset-button { min-height: 40px; }
       }
       @media (max-width: 390px) {
-        .app-shell { width: min(100% - 20px, 560px); }
+        .app-shell { width: min(calc(100% - 20px), 560px); }
         .board-wrap { padding: 8px; border-radius: 15px; }
         .board { gap: 4px; }
         .tray { padding-inline: 6px; }
         .tray-heading { align-items: flex-start; flex-direction: column; gap: 5px; }
         .tray-hint { font-size: 10px; }
+        .score-card { padding: 8px 6px; }
+        .score-icon { display: none; }
         .piece-button { min-width: 64px; min-height: 64px; padding: 6px; }
         .piece-shape { gap: 3px; }
         .piece-block { width: clamp(11px, 3vw, 16px); height: clamp(11px, 3vw, 16px); border-radius: 3px; }
         .how-list { grid-template-columns: 1fr; }
         .how-step { font-size: 11px; }
+      }
+      @media (max-width: 280px) {
+        .app-shell { width: calc(100% - 12px); }
+        .tray { padding-inline: 3px; }
+        .piece-button { min-width: 0; min-height: 58px; padding: 3px; }
+        .piece-shape { gap: 2px; }
+        .piece-block { width: 8px; height: 8px; }
+      }
+      @media (max-height: 700px) {
+        main { padding-top: 16px; padding-bottom: 20px; }
+        .intro { margin-bottom: 16px; }
+        .board-wrap { padding: 8px; }
+        .scorebar { gap: 8px; margin-bottom: 8px; }
+        .score-card { min-height: 54px; padding-block: 7px; }
+        .tray { min-height: 108px; margin-top: 8px; padding-top: 9px; padding-bottom: 8px; }
+        .tray-heading { margin-bottom: 6px; }
+        .pieces, .piece-slot { min-height: 62px; }
       }
       @media (prefers-reduced-motion: reduce) {
         *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; transition-duration: .01ms !important; }
@@ -335,10 +350,6 @@
   <body>
     <div class="app-shell">
       <header class="topbar">
-        <div class="brand" aria-label="Block and Bloom">
-          <span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
-          <span class="brand-name">block <span>&amp;</span> bloom</span>
-        </div>
         <div class="top-actions">
           <a class="repo-link" href="https://github.com/luminivis/blockpuzzle" target="_blank" rel="noopener noreferrer">
             GitHub repo <span aria-hidden="true">↗</span>
@@ -386,7 +397,7 @@
             <div class="tray">
               <div class="tray-heading">
                 <h2 class="tray-title">Your pieces</h2>
-                <span class="tray-hint">Pick a piece, then tap a spot or drag it over</span>
+                <span class="tray-hint">Pick a piece, then tap a spot or drag it onto the board</span>
               </div>
               <div class="pieces" id="pieces" aria-label="Available pieces"></div>
             </div>
@@ -478,6 +489,8 @@
         let busy = false;
         let statusTimer;
         let clearTimer;
+        let pointerDrag;
+        let draggedButton;
 
         bestElement.textContent = best.toLocaleString();
         makeBoard();
@@ -535,16 +548,6 @@
                 event.preventDefault();
                 boardElement.children[nextRow * SIZE + nextCol].focus();
               });
-              cell.addEventListener("dragover", event => {
-                if (selectedPiece < 0 || busy) return;
-                event.preventDefault();
-                preview(row, col);
-              });
-              cell.addEventListener("drop", event => {
-                if (selectedPiece < 0 || busy) return;
-                event.preventDefault();
-                placeSelected(row, col);
-              });
               fragment.append(cell);
             }
           }
@@ -554,6 +557,8 @@
         function startGame() {
           window.clearTimeout(statusTimer);
           window.clearTimeout(clearTimer);
+          pointerDrag = undefined;
+          draggedButton = undefined;
           board = Array.from({ length: SIZE }, () => Array(SIZE).fill(false));
           pieces = createPieceSet();
           score = 0;
@@ -605,27 +610,73 @@
             button.type = "button";
             button.className = `piece-button${selectedPiece === index ? " selected" : ""}`;
             button.disabled = piece.used || busy || gameEnded;
-            button.draggable = !piece.used && !busy && !gameEnded;
+            button.draggable = false;
             button.setAttribute("aria-label", `Piece ${index + 1}, ${piece.shape.length} blocks${piece.used ? ", already placed" : ""}`);
             button.setAttribute("aria-pressed", selectedPiece === index ? "true" : "false");
-            button.addEventListener("click", event => selectPiece(index, event.detail === 0));
-            button.addEventListener("dragstart", event => {
-              if (busy || piece.used) {
-                event.preventDefault();
+            button.addEventListener("click", event => {
+              if (draggedButton === button) {
+                draggedButton = undefined;
                 return;
               }
-              selectedPiece = index;
-              button.classList.add("selected");
-              button.setAttribute("aria-pressed", "true");
-              if (event.dataTransfer) event.dataTransfer.effectAllowed = "move";
-              setStatus("Place the piece on an open spot.");
+              selectPiece(index, event.detail === 0);
             });
-            button.addEventListener("dragend", () => {
-              if (selectedPiece !== index) return;
-              selectedPiece = -1;
-              button.classList.remove("selected");
-              button.setAttribute("aria-pressed", "false");
-              clearPreview();
+            button.addEventListener("pointerdown", event => {
+              if (event.button !== 0 || busy || gameEnded || piece.used || pointerDrag) return;
+              pointerDrag = {
+                pointerId: event.pointerId,
+                startX: event.clientX,
+                startY: event.clientY,
+                dragging: false
+              };
+              button.setPointerCapture(event.pointerId);
+            });
+            button.addEventListener("pointermove", event => {
+              if (!pointerDrag || pointerDrag.pointerId !== event.pointerId) return;
+              const distance = Math.hypot(event.clientX - pointerDrag.startX, event.clientY - pointerDrag.startY);
+              if (!pointerDrag.dragging && distance < 8) return;
+              if (!pointerDrag.dragging) {
+                pointerDrag.dragging = true;
+                selectedPiece = index;
+                button.classList.add("selected");
+                button.setAttribute("aria-pressed", "true");
+                setStatus("Drag the piece onto the board.");
+              }
+              event.preventDefault();
+              const cell = document.elementFromPoint(event.clientX, event.clientY)?.closest(".board-cell");
+              if (cell) preview(Number(cell.dataset.row), Number(cell.dataset.col));
+              else clearPreview();
+            });
+            button.addEventListener("pointerup", event => {
+              if (!pointerDrag || pointerDrag.pointerId !== event.pointerId) return;
+              const drag = pointerDrag;
+              pointerDrag = undefined;
+              if (!drag.dragging) return;
+              event.preventDefault();
+              draggedButton = button;
+              window.setTimeout(() => {
+                if (draggedButton === button) draggedButton = undefined;
+              }, 0);
+              const cell = document.elementFromPoint(event.clientX, event.clientY)?.closest(".board-cell");
+              if (cell) {
+                placeSelected(Number(cell.dataset.row), Number(cell.dataset.col));
+              } else {
+                selectedPiece = -1;
+                button.classList.remove("selected");
+                button.setAttribute("aria-pressed", "false");
+                clearPreview();
+                setStatus("Drop the piece on the board to place it.");
+              }
+            });
+            button.addEventListener("pointercancel", event => {
+              if (!pointerDrag || pointerDrag.pointerId !== event.pointerId) return;
+              if (pointerDrag.dragging) {
+                selectedPiece = -1;
+                button.classList.remove("selected");
+                button.setAttribute("aria-pressed", "false");
+                clearPreview();
+                setStatus("Drag cancelled.");
+              }
+              pointerDrag = undefined;
             });
 
             const maxRow = Math.max(...piece.shape.map(([row]) => row));

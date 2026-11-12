@@ -12,9 +12,9 @@ Pick a piece and put it on the 8 by 8 board. Fill a whole row or column to clear
 it. You get three pieces at a time. Each new set is picked so all three pieces
 fit when they arrive, but a careless placement can leave you with nowhere to go.
 
-Tap or click a spot to place a piece. On a computer, you can drag it instead.
-For keyboard play, use Tab to choose a piece, the arrow keys to pick a spot, and
-Enter to place it.
+Tap a piece, then tap a spot to place it. You can also drag a piece onto the
+board on a touchscreen or with a mouse. For keyboard play, use Tab to choose a
+piece, the arrow keys to pick a spot, and Enter to place it.
 
 ## Scores
 
