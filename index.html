@@ -1,0 +1,813 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#111310">
+    <meta name="description" content="A quiet little block puzzle. Make room, clear lines, and beat your best.">
+    <title>Block &amp; Bloom — Block Puzzle</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        --page: #111310;
+        --panel: #191b17;
+        --panel-raised: #20231d;
+        --cell: #242720;
+        --cell-hover: #30342b;
+        --line: #30332c;
+        --text: #f0f0e9;
+        --muted: #8d9085;
+        --accent: #c3d078;
+        --accent-dark: #9baa57;
+        --block: #c6d47f;
+        --block-highlight: #d7e39a;
+        --danger: #c8a06c;
+        --radius: 18px;
+      }
+
+      * { box-sizing: border-box; }
+
+      body {
+        min-width: 320px;
+        min-height: 100vh;
+        margin: 0;
+        background:
+          radial-gradient(ellipse at 50% 35%, rgb(101 111 65 / 8%), transparent 48%),
+          var(--page);
+        color: var(--text);
+        font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        -webkit-font-smoothing: antialiased;
+      }
+
+      button { font: inherit; }
+      button:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+
+      .app-shell { width: min(100% - 40px, 1056px); margin: 0 auto; }
+
+      .topbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        min-height: 82px;
+        border-bottom: 1px solid rgb(255 255 255 / 6%);
+      }
+
+      .brand { display: flex; align-items: center; gap: 12px; }
+      .brand-mark {
+        display: grid;
+        grid-template-columns: repeat(2, 9px);
+        grid-template-rows: repeat(2, 9px);
+        gap: 3px;
+        transform: rotate(-7deg);
+      }
+      .brand-mark i { display: block; border-radius: 2px; background: var(--accent); }
+      .brand-mark i:nth-child(2) { opacity: .7; }
+      .brand-mark i:nth-child(3) { opacity: .48; }
+      .brand-name { font-size: 15px; font-weight: 720; letter-spacing: -.035em; }
+      .brand-name span { color: var(--accent); }
+
+      .top-actions { display: flex; align-items: center; gap: 10px; }
+      .subtle-label {
+        color: var(--muted);
+        font-size: 11px;
+        font-weight: 650;
+        letter-spacing: .12em;
+        text-transform: uppercase;
+      }
+      .icon-button, .reset-button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        border: 1px solid var(--line);
+        background: transparent;
+        color: var(--muted);
+        cursor: pointer;
+        transition: color .18s ease, border-color .18s ease, background .18s ease;
+      }
+      .icon-button { width: 38px; height: 38px; border-radius: 12px; }
+      .icon-button:hover, .reset-button:hover { border-color: #565a4c; color: var(--text); background: #ffffff06; }
+      .icon-button svg { width: 17px; height: 17px; }
+
+      main { padding: 38px 0 42px; }
+      .intro { margin-bottom: 25px; text-align: center; }
+      .eyebrow {
+        margin: 0 0 8px;
+        color: var(--accent);
+        font-size: 10px;
+        font-weight: 750;
+        letter-spacing: .18em;
+        text-transform: uppercase;
+      }
+      h1 { margin: 0; font-size: clamp(26px, 4vw, 34px); font-weight: 630; letter-spacing: -.055em; }
+      .intro-copy { margin: 8px 0 0; color: var(--muted); font-size: 13px; }
+
+      .game-layout {
+        display: grid;
+        grid-template-columns: minmax(0, 620px) 236px;
+        align-items: start;
+        justify-content: center;
+        gap: 18px;
+      }
+      .game-main { min-width: 0; }
+      .scorebar { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-bottom: 12px; }
+      .score-card {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        min-width: 0;
+        min-height: 70px;
+        padding: 13px 18px;
+        border: 1px solid var(--line);
+        border-radius: 15px;
+        background: linear-gradient(145deg, #1d201a, #191b17);
+      }
+      .score-card-label { display: block; margin-bottom: 4px; color: var(--muted); font-size: 10px; font-weight: 700; letter-spacing: .11em; text-transform: uppercase; }
+      .score-value { font-variant-numeric: tabular-nums; white-space: nowrap; font-size: clamp(16px, 3.8vw, 23px); font-weight: 680; letter-spacing: -.04em; }
+      .score-icon { color: var(--accent); font-size: 17px; opacity: .78; }
+
+      .board-wrap {
+        position: relative;
+        padding: clamp(9px, 2.4vw, 16px);
+        border: 1px solid #33362e;
+        border-radius: 20px;
+        background: #191b17;
+        box-shadow: 0 18px 50px #00000030, inset 0 1px #ffffff08;
+      }
+      .board {
+        display: grid;
+        grid-template-columns: repeat(8, minmax(0, 1fr));
+        gap: clamp(4px, 1vw, 7px);
+        touch-action: manipulation;
+      }
+      .board-cell {
+        position: relative;
+        aspect-ratio: 1;
+        min-width: 0;
+        padding: 0;
+        overflow: hidden;
+        border: 1px solid #ffffff04;
+        border-radius: clamp(4px, .9vw, 8px);
+        background: var(--cell);
+        cursor: pointer;
+        transition: background .12s ease, transform .12s ease, box-shadow .12s ease;
+      }
+      .board-cell:hover { background: var(--cell-hover); }
+      .board-cell.filled {
+        border-color: #dce9a526;
+        background: linear-gradient(145deg, var(--block-highlight), var(--block));
+        box-shadow: inset 0 1px #ffffff52, inset 0 -2px #87944750, 0 1px 2px #0005;
+        cursor: default;
+      }
+      .board-cell.preview { background: #c3d07886; box-shadow: inset 0 0 0 1px #e6edb680; }
+      .board-cell.invalid-preview { background: #c9a46770; }
+      .board-cell.clearing { animation: clear-cell .2s ease both; }
+      @keyframes clear-cell {
+        0% { opacity: 1; transform: scale(1); }
+        55% { opacity: .75; transform: scale(.72); }
+        100% { opacity: .2; transform: scale(.45); }
+      }
+
+      .tray {
+        min-height: 132px;
+        margin-top: 12px;
+        padding: 14px 18px 13px;
+        border: 1px solid var(--line);
+        border-radius: 17px;
+        background: var(--panel);
+      }
+      .tray-heading { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+      .tray-title { margin: 0; font-size: 11px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; }
+      .tray-hint { color: var(--muted); font-size: 11px; }
+      .pieces { display: grid; grid-template-columns: repeat(3, 1fr); align-items: center; min-height: 76px; }
+      .piece-slot { display: flex; justify-content: center; align-items: center; min-height: 74px; }
+      .piece-button {
+        display: grid;
+        place-items: center;
+        min-width: 76px;
+        min-height: 70px;
+        padding: 8px;
+        border: 1px solid transparent;
+        border-radius: 12px;
+        background: transparent;
+        cursor: grab;
+        transition: background .16s ease, border-color .16s ease, transform .16s ease, opacity .16s ease;
+      }
+      .piece-button:active { cursor: grabbing; }
+      .piece-button:hover:not(:disabled) { background: #ffffff08; transform: translateY(-2px); }
+      .piece-button.selected { border-color: #c3d07863; background: #c3d07812; }
+      .piece-button:disabled { cursor: default; opacity: .18; }
+      .piece-shape { display: grid; gap: 4px; }
+      .piece-block {
+        width: clamp(15px, 3.2vw, 20px);
+        height: clamp(15px, 3.2vw, 20px);
+        border: 1px solid #dce9a530;
+        border-radius: 4px;
+        background: linear-gradient(145deg, var(--block-highlight), var(--block));
+        box-shadow: inset 0 1px #ffffff44, inset 0 -2px #87944744;
+      }
+      .piece-block.empty { visibility: hidden; }
+      .sr-only {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        white-space: nowrap;
+        border: 0;
+      }
+
+      .side-panel { display: grid; gap: 12px; }
+      .side-card {
+        padding: 18px;
+        border: 1px solid var(--line);
+        border-radius: 16px;
+        background: linear-gradient(150deg, #1d201a, #191b17);
+      }
+      .side-heading { display: flex; align-items: center; gap: 9px; margin: 0 0 14px; font-size: 12px; font-weight: 700; letter-spacing: .015em; }
+      .side-heading svg { width: 16px; height: 16px; color: var(--accent); }
+      .how-list { display: grid; gap: 13px; margin: 0; padding: 0; list-style: none; }
+      .how-step { display: grid; grid-template-columns: 24px 1fr; gap: 9px; align-items: start; color: #b6b8ae; font-size: 11px; line-height: 1.55; }
+      .step-number {
+        display: grid;
+        place-items: center;
+        width: 22px;
+        height: 22px;
+        border: 1px solid #3b3e34;
+        border-radius: 7px;
+        color: var(--accent);
+        font-size: 10px;
+        font-weight: 700;
+      }
+      .side-divider { height: 1px; margin: 16px 0 13px; background: var(--line); }
+      .tip { margin: 0; color: var(--muted); font-size: 10px; line-height: 1.65; }
+      .tip strong { color: #c7c9bd; font-weight: 600; }
+      .reset-button { width: 100%; min-height: 43px; border-radius: 12px; font-size: 11px; font-weight: 650; }
+      .reset-button svg { width: 14px; height: 14px; }
+
+      .status-line { min-height: 20px; margin: 10px 0 0; color: var(--muted); font-size: 11px; text-align: center; }
+      .status-line[aria-live] { transition: color .18s ease; }
+      .status-line.success { color: var(--accent); }
+      .status-line.error { color: var(--danger); }
+      footer { padding: 0 0 22px; color: #696c63; font-size: 10px; text-align: center; }
+
+      .game-over {
+        position: absolute;
+        z-index: 2;
+        inset: 9px;
+        display: none;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 24px;
+        border: 1px solid #424638;
+        border-radius: 14px;
+        background: rgb(20 22 18 / 93%);
+        text-align: center;
+        backdrop-filter: blur(7px);
+      }
+      .game-over.visible { display: flex; }
+      .game-over h2 { margin: 0 0 7px; font-size: 25px; letter-spacing: -.04em; }
+      .game-over p { max-width: 245px; margin: 0 0 17px; color: var(--muted); font-size: 12px; line-height: 1.5; }
+      .game-over .reset-button { width: auto; padding: 0 17px; border-color: #85934f80; color: var(--accent); }
+
+      .confirm-dialog {
+        width: min(390px, calc(100% - 32px));
+        max-width: none;
+        padding: 0;
+        border: 1px solid #3b3e34;
+        border-radius: 18px;
+        background: #1b1e18;
+        color: var(--text);
+        box-shadow: 0 24px 80px #0009;
+      }
+      .confirm-dialog::backdrop { background: rgb(7 8 7 / 72%); backdrop-filter: blur(4px); }
+      .confirm-content { padding: 24px; }
+      .confirm-eyebrow { margin: 0 0 8px; color: var(--accent); font-size: 10px; font-weight: 750; letter-spacing: .14em; text-transform: uppercase; }
+      .confirm-content h2 { margin: 0; font-size: 22px; letter-spacing: -.04em; }
+      .confirm-content p:not(.confirm-eyebrow) { margin: 8px 0 20px; color: var(--muted); font-size: 12px; line-height: 1.6; }
+      .confirm-actions { display: flex; justify-content: flex-end; gap: 9px; }
+      .confirm-actions .reset-button { width: auto; min-height: 40px; padding: 0 13px; }
+      .confirm-actions .confirm-new-game { border-color: #85934f80; color: var(--accent); }
+
+      @media (max-width: 760px) {
+        .app-shell { width: min(100% - 28px, 560px); }
+        .topbar { min-height: 68px; }
+        main { padding: 28px 0 30px; }
+        .game-layout { grid-template-columns: minmax(0, 1fr); gap: 12px; }
+        .side-panel { grid-template-columns: 1fr; }
+        .side-card { padding: 15px 17px; }
+        .score-card { min-height: 64px; padding: 10px 11px; }
+        .score-card-label { font-size: 9px; }
+        .how-list { grid-template-columns: repeat(3, 1fr); gap: 7px; }
+        .how-step { grid-template-columns: 22px 1fr; gap: 6px; font-size: 10px; }
+        .side-divider, .tip { display: none; }
+        .side-heading { margin-bottom: 11px; }
+        .reset-button { min-height: 40px; }
+      }
+      @media (max-width: 390px) {
+        .app-shell { width: min(100% - 20px, 560px); }
+        .board-wrap { padding: 8px; border-radius: 15px; }
+        .board { gap: 4px; }
+        .tray { padding-inline: 6px; }
+        .tray-heading { align-items: flex-start; flex-direction: column; gap: 5px; }
+        .tray-hint { font-size: 10px; }
+        .piece-button { min-width: 64px; min-height: 64px; padding: 6px; }
+        .piece-shape { gap: 3px; }
+        .piece-block { width: clamp(11px, 3vw, 16px); height: clamp(11px, 3vw, 16px); border-radius: 3px; }
+        .how-list { grid-template-columns: 1fr; }
+        .how-step { font-size: 11px; }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; transition-duration: .01ms !important; }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="topbar">
+        <div class="brand" aria-label="Block and Bloom">
+          <span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
+          <span class="brand-name">block <span>&amp;</span> bloom</span>
+        </div>
+        <div class="top-actions">
+          <span class="subtle-label">No rush</span>
+        </div>
+      </header>
+
+      <main>
+        <section class="intro" aria-labelledby="page-title">
+          <p class="eyebrow">A little room to think</p>
+          <h1 id="page-title">Make space.</h1>
+          <p class="intro-copy">Fit the pieces. Clear the lines. See how long you can go.</p>
+        </section>
+
+        <section class="game-layout" aria-label="Block puzzle game">
+          <div class="game-main">
+            <div class="scorebar" aria-label="Game scores">
+              <div class="score-card">
+                <div><span class="score-card-label">Your score</span><strong class="score-value" id="score">0</strong></div>
+                <span class="score-icon" aria-hidden="true">✳</span>
+              </div>
+              <div class="score-card">
+                <div><span class="score-card-label">Best</span><strong class="score-value" id="best">0</strong></div>
+                <span class="score-icon" aria-hidden="true">↗</span>
+              </div>
+              <div class="score-card">
+                <div><span class="score-card-label">Lines</span><strong class="score-value" id="lines">0</strong></div>
+                <span class="score-icon" aria-hidden="true">≡</span>
+              </div>
+            </div>
+
+            <div class="board-wrap">
+              <p class="sr-only" id="board-instructions">Tab to a piece and select it. Then use the arrow keys to choose a space and press Enter to place it.</p>
+              <div class="board" id="board" role="group" aria-label="8 by 8 puzzle board" aria-describedby="board-instructions"></div>
+              <div class="game-over" id="game-over" role="alert">
+                <h2>No room left.</h2>
+                <p id="game-over-copy">No more pieces fit. Fancy another round?</p>
+                <button class="reset-button" id="play-again">
+                  <svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M16.5 9.3A6.7 6.7 0 1 1 14.4 5M16.5 3.5v5h-5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                  Play again
+                </button>
+              </div>
+            </div>
+
+            <div class="tray">
+              <div class="tray-heading">
+                <h2 class="tray-title">Your pieces</h2>
+                <span class="tray-hint">Choose a piece; tap a space or drag it</span>
+              </div>
+              <div class="pieces" id="pieces" aria-label="Available pieces"></div>
+            </div>
+            <p class="status-line" id="status" aria-live="polite">Pick a piece to get started.</p>
+          </div>
+
+          <aside class="side-panel">
+            <section class="side-card">
+              <h2 class="side-heading">
+                <svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M10 2.5 12 7l4.8.5-3.6 3.2 1 4.8-4.2-2.4-4.2 2.4 1-4.8-3.6-3.2L8 7l2-4.5Z" stroke="currentColor" stroke-width="1.35" stroke-linejoin="round"/></svg>
+                How to play
+              </h2>
+              <ol class="how-list">
+                <li class="how-step"><span class="step-number">1</span><span>Choose one of the three pieces.</span></li>
+                <li class="how-step"><span class="step-number">2</span><span>Tap or drag it into place.</span></li>
+                <li class="how-step"><span class="step-number">3</span><span>Fill a row or column to clear it.</span></li>
+              </ol>
+              <div class="side-divider"></div>
+              <p class="tip"><strong>Little tip:</strong> Keep a few open spaces for the bigger pieces. There’s no rush.</p>
+            </section>
+            <button class="reset-button" id="new-game">
+              <svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M16.5 9.3A6.7 6.7 0 1 1 14.4 5M16.5 3.5v5h-5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              New game
+            </button>
+          </aside>
+        </section>
+      </main>
+      <dialog class="confirm-dialog" id="new-game-dialog" aria-labelledby="confirm-title" aria-describedby="confirm-copy">
+        <form class="confirm-content" method="dialog">
+          <p class="confirm-eyebrow">A fresh start</p>
+          <h2 id="confirm-title">Start over?</h2>
+          <p id="confirm-copy">Your current score will reset. Your personal best is safe.</p>
+          <div class="confirm-actions">
+            <button class="reset-button" value="cancel">Keep playing</button>
+            <button class="reset-button confirm-new-game" value="restart">New game</button>
+          </div>
+        </form>
+      </dialog>
+      <footer>A small game for a slower moment.</footer>
+    </div>
+
+    <script>
+      (() => {
+        "use strict";
+
+        if ("serviceWorker" in navigator && location.protocol !== "file:") {
+          navigator.serviceWorker.register("./service-worker.js").catch(error => {
+            console.error("Offline support could not be enabled.", error);
+          });
+        }
+
+        const SIZE = 8;
+        const SHAPES = [
+          [[0, 0]], [[0, 0], [0, 1]], [[0, 0], [1, 0]], [[0, 0], [0, 1], [1, 0]],
+          [[0, 0], [0, 1], [1, 0], [1, 1]],
+          [[0, 0], [0, 1], [0, 2]], [[0, 0], [1, 0], [2, 0]],
+          [[0, 0], [0, 1], [0, 2], [0, 3]], [[0, 0], [1, 0], [2, 0], [3, 0]],
+          [[0, 0], [0, 1], [0, 2], [0, 3], [0, 4]], [[0, 0], [1, 0], [2, 0], [3, 0], [4, 0]],
+          [[0, 0], [1, 0], [2, 0], [2, 1]], [[0, 0], [0, 1], [0, 2], [1, 0]],
+          [[0, 0], [1, 0], [1, 1], [1, 2]], [[0, 2], [1, 0], [1, 1], [1, 2]],
+          [[0, 0], [0, 1], [1, 1], [1, 2]], [[0, 1], [0, 2], [1, 0], [1, 1]],
+          [[0, 0], [1, 0], [2, 0], [2, 1], [2, 2]],
+          [[0, 0], [0, 1], [0, 2], [1, 0], [2, 0]],
+          [[0, 0], [0, 1], [0, 2], [1, 1], [2, 1]],
+          [[0, 1], [1, 0], [1, 1], [1, 2], [2, 1]]
+        ];
+
+        const boardElement = document.querySelector("#board");
+        const piecesElement = document.querySelector("#pieces");
+        const scoreElement = document.querySelector("#score");
+        const bestElement = document.querySelector("#best");
+        const linesElement = document.querySelector("#lines");
+        const statusElement = document.querySelector("#status");
+        const gameOverElement = document.querySelector("#game-over");
+        const gameOverCopy = document.querySelector("#game-over-copy");
+        const playAgainButton = document.querySelector("#play-again");
+        const newGameDialog = document.querySelector("#new-game-dialog");
+        let board;
+        let pieces;
+        let selectedPiece = -1;
+        let score = 0;
+        let linesCleared = 0;
+        let focusedCellIndex = 0;
+        let gameEnded = false;
+        let best = readBest();
+        let busy = false;
+        let statusTimer;
+        let clearTimer;
+
+        bestElement.textContent = best.toLocaleString();
+        makeBoard();
+        startGame();
+
+        function readBest() {
+          try {
+            const value = Number(localStorage.getItem("block-and-bloom-best"));
+            return Number.isFinite(value) && value > 0 ? value : 0;
+          } catch (error) {
+            console.warn("Could not read the saved best score.", error);
+            return 0;
+          }
+        }
+
+        function saveBest() {
+          try {
+            localStorage.setItem("block-and-bloom-best", String(best));
+          } catch (error) {
+            console.warn("Could not save the best score.", error);
+          }
+        }
+
+        function makeBoard() {
+          const fragment = document.createDocumentFragment();
+          for (let row = 0; row < SIZE; row += 1) {
+            for (let col = 0; col < SIZE; col += 1) {
+              const cell = document.createElement("button");
+              cell.type = "button";
+              cell.className = "board-cell";
+              cell.dataset.row = String(row);
+              cell.dataset.col = String(col);
+              cell.tabIndex = row === 0 && col === 0 ? 0 : -1;
+              cell.setAttribute("aria-label", `Row ${row + 1}, column ${col + 1}, empty`);
+              cell.addEventListener("click", () => placeSelected(row, col));
+              cell.addEventListener("mouseenter", () => preview(row, col));
+              cell.addEventListener("mouseleave", clearPreview);
+              cell.addEventListener("focus", () => {
+                Array.from(boardElement.children).forEach(item => { item.tabIndex = -1; });
+                cell.tabIndex = 0;
+                focusedCellIndex = row * SIZE + col;
+              });
+              cell.addEventListener("keydown", event => {
+                const moves = {
+                  ArrowUp: [-1, 0],
+                  ArrowDown: [1, 0],
+                  ArrowLeft: [0, -1],
+                  ArrowRight: [0, 1]
+                };
+                const move = moves[event.key];
+                if (!move) return;
+                const nextRow = row + move[0];
+                const nextCol = col + move[1];
+                if (nextRow < 0 || nextRow >= SIZE || nextCol < 0 || nextCol >= SIZE) return;
+                event.preventDefault();
+                boardElement.children[nextRow * SIZE + nextCol].focus();
+              });
+              cell.addEventListener("dragover", event => {
+                if (selectedPiece < 0 || busy) return;
+                event.preventDefault();
+                preview(row, col);
+              });
+              cell.addEventListener("drop", event => {
+                if (selectedPiece < 0 || busy) return;
+                event.preventDefault();
+                placeSelected(row, col);
+              });
+              fragment.append(cell);
+            }
+          }
+          boardElement.append(fragment);
+        }
+
+        function startGame() {
+          window.clearTimeout(statusTimer);
+          window.clearTimeout(clearTimer);
+          board = Array.from({ length: SIZE }, () => Array(SIZE).fill(false));
+          pieces = createPieceSet();
+          score = 0;
+          linesCleared = 0;
+          selectedPiece = -1;
+          busy = false;
+          gameEnded = false;
+          scoreElement.textContent = "0";
+          linesElement.textContent = "0";
+          gameOverElement.classList.remove("visible");
+          Array.from(boardElement.children).forEach(cell => { cell.disabled = false; });
+          renderBoard();
+          renderPieces();
+          setStatus("Pick a piece to get started.");
+        }
+
+        function createPieceSet() {
+          const playableShapes = SHAPES.filter(hasPlacement);
+          const shapesToDrawFrom = playableShapes.length ? playableShapes : SHAPES;
+          const bag = [...shapesToDrawFrom];
+          const result = [];
+          for (let i = 0; i < 3; i += 1) {
+            if (bag.length === 0) bag.push(...shapesToDrawFrom);
+            const index = Math.floor(Math.random() * bag.length);
+            result.push({ shape: bag.splice(index, 1)[0], used: false });
+          }
+          return result;
+        }
+
+        function renderBoard() {
+          const cells = boardElement.children;
+          for (let row = 0; row < SIZE; row += 1) {
+            for (let col = 0; col < SIZE; col += 1) {
+              const cell = cells[row * SIZE + col];
+              const filled = board[row][col];
+              cell.classList.toggle("filled", filled);
+              cell.classList.remove("preview", "invalid-preview", "clearing");
+              cell.setAttribute("aria-label", `Row ${row + 1}, column ${col + 1}, ${filled ? "filled" : "empty"}`);
+            }
+          }
+        }
+
+        function renderPieces() {
+          piecesElement.replaceChildren();
+          pieces.forEach((piece, index) => {
+            const slot = document.createElement("div");
+            slot.className = "piece-slot";
+            const button = document.createElement("button");
+            button.type = "button";
+            button.className = `piece-button${selectedPiece === index ? " selected" : ""}`;
+            button.disabled = piece.used || busy || gameEnded;
+            button.draggable = !piece.used && !busy && !gameEnded;
+            button.setAttribute("aria-label", `Piece ${index + 1}, ${piece.shape.length} blocks${piece.used ? ", already placed" : ""}`);
+            button.setAttribute("aria-pressed", selectedPiece === index ? "true" : "false");
+            button.addEventListener("click", event => selectPiece(index, event.detail === 0));
+            button.addEventListener("dragstart", event => {
+              if (busy || piece.used) {
+                event.preventDefault();
+                return;
+              }
+              selectedPiece = index;
+              button.classList.add("selected");
+              button.setAttribute("aria-pressed", "true");
+              if (event.dataTransfer) event.dataTransfer.effectAllowed = "move";
+              setStatus("Place the piece on an open spot.");
+            });
+            button.addEventListener("dragend", () => {
+              if (selectedPiece !== index) return;
+              selectedPiece = -1;
+              button.classList.remove("selected");
+              button.setAttribute("aria-pressed", "false");
+              clearPreview();
+            });
+
+            const maxRow = Math.max(...piece.shape.map(([row]) => row));
+            const maxCol = Math.max(...piece.shape.map(([, col]) => col));
+            const occupied = new Set(piece.shape.map(([row, col]) => `${row}:${col}`));
+            const shape = document.createElement("span");
+            shape.className = "piece-shape";
+            shape.style.gridTemplateColumns = `repeat(${maxCol + 1}, auto)`;
+            shape.setAttribute("aria-hidden", "true");
+            for (let row = 0; row <= maxRow; row += 1) {
+              for (let col = 0; col <= maxCol; col += 1) {
+                const block = document.createElement("i");
+                block.className = `piece-block${occupied.has(`${row}:${col}`) ? "" : " empty"}`;
+                shape.append(block);
+              }
+            }
+            button.append(shape);
+            slot.append(button);
+            piecesElement.append(slot);
+          });
+        }
+
+        function selectPiece(index, returnFocusToBoard = false) {
+          if (busy || gameEnded || pieces[index].used) return;
+          selectedPiece = selectedPiece === index ? -1 : index;
+          renderPieces();
+          if (returnFocusToBoard) boardElement.children[focusedCellIndex].focus();
+          clearPreview();
+          setStatus(selectedPiece < 0 ? "Pick a piece to get started." : "Choose an open spot on the board.");
+        }
+
+        function canPlace(shape, row, col) {
+          return shape.every(([dr, dc]) => {
+            const nextRow = row + dr;
+            const nextCol = col + dc;
+            return nextRow >= 0 && nextRow < SIZE && nextCol >= 0 && nextCol < SIZE && !board[nextRow][nextCol];
+          });
+        }
+
+        function placeSelected(row, col) {
+          if (busy || gameEnded) return;
+          if (selectedPiece < 0) {
+            setStatus("Choose a piece below first.", "error");
+            return;
+          }
+          const piece = pieces[selectedPiece];
+          if (!canPlace(piece.shape, row, col)) {
+            setStatus("That piece doesn’t fit there.", "error");
+            const boardWrap = document.querySelector(".board-wrap");
+            boardWrap.animate(
+              [{ transform: "translateX(0)" }, { transform: "translateX(-4px)" }, { transform: "translateX(4px)" }, { transform: "translateX(0)" }],
+              { duration: 180 }
+            );
+            return;
+          }
+
+          piece.shape.forEach(([dr, dc]) => { board[row + dr][col + dc] = true; });
+          piece.used = true;
+          selectedPiece = -1;
+          const cleared = getCompletedLines();
+          linesCleared += cleared.length;
+          linesElement.textContent = linesCleared.toLocaleString();
+          const clearedCells = new Set();
+          cleared.rows.forEach(line => {
+            for (let colIndex = 0; colIndex < SIZE; colIndex += 1) clearedCells.add(`${line}:${colIndex}`);
+          });
+          cleared.cols.forEach(line => {
+            for (let rowIndex = 0; rowIndex < SIZE; rowIndex += 1) clearedCells.add(`${rowIndex}:${line}`);
+          });
+
+          const earned = piece.shape.length * 10 + cleared.length * 100 + Math.max(0, cleared.length - 1) * 50;
+          updateScore(earned);
+          if (clearedCells.size) {
+            busy = true;
+            clearedCells.forEach(key => {
+              const [clearRow, clearCol] = key.split(":").map(Number);
+              boardElement.children[clearRow * SIZE + clearCol].classList.add("clearing");
+            });
+            setStatus(cleared.length > 1 ? `${cleared.length} lines cleared. Lovely.` : "Line cleared. Nice one.", "success");
+            clearTimer = window.setTimeout(() => {
+              clearTimer = undefined;
+              clearedCells.forEach(key => {
+                const [clearRow, clearCol] = key.split(":").map(Number);
+                board[clearRow][clearCol] = false;
+              });
+              afterPlacement();
+            }, 200);
+          } else {
+            setStatus("Nicely placed.", "success");
+            afterPlacement();
+          }
+        }
+
+        function getCompletedLines() {
+          const rows = [];
+          const cols = [];
+          for (let i = 0; i < SIZE; i += 1) {
+            if (board[i].every(Boolean)) rows.push(i);
+            if (board.every(row => row[i])) cols.push(i);
+          }
+          return { rows, cols, length: rows.length + cols.length };
+        }
+
+        function afterPlacement() {
+          renderBoard();
+          busy = false;
+          if (pieces.every(piece => piece.used)) {
+            pieces = createPieceSet();
+          }
+          renderPieces();
+          if (!hasAnyMove()) {
+            selectedPiece = -1;
+            gameEnded = true;
+            Array.from(boardElement.children).forEach(cell => { cell.disabled = true; });
+            renderPieces();
+            const lineWord = linesCleared === 1 ? "line" : "lines";
+            gameOverCopy.textContent = `You scored ${score.toLocaleString()} points and cleared ${linesCleared.toLocaleString()} ${lineWord}. Fancy another round?`;
+            gameOverElement.classList.add("visible");
+            playAgainButton.focus();
+            setStatus("No more pieces fit. Start a new game when you’re ready.");
+            return;
+          }
+          window.clearTimeout(statusTimer);
+          statusTimer = window.setTimeout(() => {
+            setStatus("Choose your next piece.");
+          }, 1250);
+        }
+
+        function hasAnyMove() {
+          return pieces.some(piece => !piece.used && hasPlacement(piece.shape));
+        }
+
+        function hasPlacement(shape) {
+          for (let row = 0; row < SIZE; row += 1) {
+            for (let col = 0; col < SIZE; col += 1) {
+              if (canPlace(shape, row, col)) return true;
+            }
+          }
+          return false;
+        }
+
+        function updateScore(points) {
+          score += points;
+          scoreElement.textContent = score.toLocaleString();
+          if (score > best) {
+            best = score;
+            bestElement.textContent = best.toLocaleString();
+            saveBest();
+          }
+        }
+
+        function preview(row, col) {
+          if (selectedPiece < 0 || busy || gameEnded) return;
+          clearPreview();
+          const shape = pieces[selectedPiece].shape;
+          const valid = canPlace(shape, row, col);
+          shape.forEach(([dr, dc]) => {
+            const targetRow = row + dr;
+            const targetCol = col + dc;
+            if (targetRow < 0 || targetRow >= SIZE || targetCol < 0 || targetCol >= SIZE) return;
+            boardElement.children[targetRow * SIZE + targetCol].classList.add(valid ? "preview" : "invalid-preview");
+          });
+        }
+
+        function clearPreview() {
+          boardElement.querySelectorAll(".preview, .invalid-preview").forEach(cell => {
+            cell.classList.remove("preview", "invalid-preview");
+          });
+        }
+
+        function setStatus(message, kind = "") {
+          window.clearTimeout(statusTimer);
+          statusElement.textContent = message;
+          statusElement.classList.toggle("success", kind === "success");
+          statusElement.classList.toggle("error", kind === "error");
+        }
+
+        document.querySelector("#new-game").addEventListener("click", () => {
+          const hasProgress = score > 0;
+          if (hasProgress) {
+            newGameDialog.returnValue = "";
+            newGameDialog.showModal();
+            return;
+          }
+          startGame();
+        });
+        newGameDialog.addEventListener("close", () => {
+          if (newGameDialog.returnValue === "restart") startGame();
+        });
+        playAgainButton.addEventListener("click", () => {
+          startGame();
+          boardElement.children[0].focus();
+        });
+      })();
+    </script>
+  </body>
+</html>
