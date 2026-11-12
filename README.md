@@ -1,26 +1,29 @@
 # Block Puzzle
 
-A quiet block puzzle for a slower moment. No ads, accounts, or app install.
+## About
+
+I vibe coded this little block game with AI. I wanted something simple to pick
+up for a few minutes. There is no timer, no sign up, and no complicated stuff.
+It is a work in progress, so there may still be a few rough edges.
 
 ## How to play
 
-1. Choose one of the three pieces.
-2. Place it in an open spot on the board.
-3. Fill a full row or column to clear it and make room.
-4. Keep going for a high score. The round ends when none of your available
-   pieces fit.
+Pick a piece and put it on the 8 by 8 board. Fill a whole row or column to clear
+it. You get three pieces at a time. Each new set is picked so all three pieces
+fit when they arrive, but a careless placement can leave you with nowhere to go.
 
-Tap or click to place a piece. On a computer, you can drag pieces onto the board.
-For keyboard play, use Tab to choose a piece, then the arrow keys to select a
-spot and Enter to place it.
+Tap or click a spot to place a piece. On a computer, you can drag it instead.
+For keyboard play, use Tab to choose a piece, the arrow keys to pick a spot, and
+Enter to place it.
 
-## Your scores
+## Scores
 
-The game tracks your score, cleared lines, and personal best. Your best score is
-saved in your browser and is not shared with anyone.
+Your score, cleared lines, and best are shown while you play. The best is saved
+in your browser and is not shared. It is just for fun, not a competitive
+leaderboard.
 
-## Play offline
+## Offline
 
-The game does not need external images or other online assets. When hosted on a
-secure website, open it once while online so your browser can save it for offline
-play. After that, you can return without an internet connection.
+There are no outside images or other online assets. If you open `index.html`
+directly, it works offline. For the hosted website, visit once while online so
+your browser can save the game. Then you can play without a connection.

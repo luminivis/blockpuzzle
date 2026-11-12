@@ -4,8 +4,8 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="theme-color" content="#111310">
-    <meta name="description" content="A quiet little block puzzle. Make room, clear lines, and beat your best.">
-    <title>Block &amp; Bloom — Block Puzzle</title>
+    <meta name="description" content="A little block puzzle. Place pieces, clear lines, and see how long you can keep going.">
+    <title>Block Puzzle</title>
     <style>
       :root {
         color-scheme: dark;
@@ -67,13 +67,18 @@
       .brand-name span { color: var(--accent); }
 
       .top-actions { display: flex; align-items: center; gap: 10px; }
-      .subtle-label {
+      .repo-link {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
         color: var(--muted);
         font-size: 11px;
         font-weight: 650;
-        letter-spacing: .12em;
-        text-transform: uppercase;
+        text-decoration: none;
+        transition: color .18s ease;
       }
+      .repo-link:hover { color: var(--text); }
+      .repo-link span { color: var(--accent); }
       .icon-button, .reset-button {
         display: inline-flex;
         align-items: center;
@@ -251,7 +256,9 @@
       .status-line[aria-live] { transition: color .18s ease; }
       .status-line.success { color: var(--accent); }
       .status-line.error { color: var(--danger); }
-      footer { padding: 0 0 22px; color: #696c63; font-size: 10px; text-align: center; }
+      footer { padding: 0 0 22px; color: #85877e; font-size: 10px; text-align: center; }
+      footer a { color: var(--accent); text-decoration: none; }
+      footer a:hover { text-decoration: underline; }
 
       .game-over {
         position: absolute;
@@ -333,15 +340,17 @@
           <span class="brand-name">block <span>&amp;</span> bloom</span>
         </div>
         <div class="top-actions">
-          <span class="subtle-label">No rush</span>
+          <a class="repo-link" href="https://github.com/luminivis/blockpuzzle" target="_blank" rel="noopener noreferrer">
+            GitHub repo <span aria-hidden="true">↗</span>
+          </a>
         </div>
       </header>
 
       <main>
         <section class="intro" aria-labelledby="page-title">
-          <p class="eyebrow">A little room to think</p>
-          <h1 id="page-title">Make space.</h1>
-          <p class="intro-copy">Fit the pieces. Clear the lines. See how long you can go.</p>
+          <p class="eyebrow">A little puzzle break</p>
+          <h1 id="page-title">Block Puzzle</h1>
+          <p class="intro-copy">Place a few pieces, clear some space, and see how long you can keep going.</p>
         </section>
 
         <section class="game-layout" aria-label="Block puzzle game">
@@ -377,11 +386,11 @@
             <div class="tray">
               <div class="tray-heading">
                 <h2 class="tray-title">Your pieces</h2>
-                <span class="tray-hint">Choose a piece; tap a space or drag it</span>
+                <span class="tray-hint">Pick a piece, then tap a spot or drag it over</span>
               </div>
               <div class="pieces" id="pieces" aria-label="Available pieces"></div>
             </div>
-            <p class="status-line" id="status" aria-live="polite">Pick a piece to get started.</p>
+            <p class="status-line" id="status" aria-live="polite">Choose a piece to begin.</p>
           </div>
 
           <aside class="side-panel">
@@ -391,12 +400,12 @@
                 How to play
               </h2>
               <ol class="how-list">
-                <li class="how-step"><span class="step-number">1</span><span>Choose one of the three pieces.</span></li>
-                <li class="how-step"><span class="step-number">2</span><span>Tap or drag it into place.</span></li>
+                <li class="how-step"><span class="step-number">1</span><span>Choose a piece from the tray.</span></li>
+                <li class="how-step"><span class="step-number">2</span><span>Tap a spot or drag it into place.</span></li>
                 <li class="how-step"><span class="step-number">3</span><span>Fill a row or column to clear it.</span></li>
               </ol>
               <div class="side-divider"></div>
-              <p class="tip"><strong>Little tip:</strong> Keep a few open spaces for the bigger pieces. There’s no rush.</p>
+              <p class="tip"><strong>Quick tip:</strong> The long pieces need room, so try not to use every corner.</p>
             </section>
             <button class="reset-button" id="new-game">
               <svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M16.5 9.3A6.7 6.7 0 1 1 14.4 5M16.5 3.5v5h-5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -409,14 +418,17 @@
         <form class="confirm-content" method="dialog">
           <p class="confirm-eyebrow">A fresh start</p>
           <h2 id="confirm-title">Start over?</h2>
-          <p id="confirm-copy">Your current score will reset. Your personal best is safe.</p>
+          <p id="confirm-copy">This clears your current score. Your best score will stay.</p>
           <div class="confirm-actions">
             <button class="reset-button" value="cancel">Keep playing</button>
             <button class="reset-button confirm-new-game" value="restart">New game</button>
           </div>
         </form>
       </dialog>
-      <footer>A small game for a slower moment.</footer>
+      <footer>
+        I vibe coded this with AI. It is a work in progress.
+        <a href="https://github.com/luminivis/blockpuzzle" target="_blank" rel="noopener noreferrer">Take a look at the code.</a>
+      </footer>
     </div>
 
     <script>
@@ -642,7 +654,7 @@
           renderPieces();
           if (returnFocusToBoard) boardElement.children[focusedCellIndex].focus();
           clearPreview();
-          setStatus(selectedPiece < 0 ? "Pick a piece to get started." : "Choose an open spot on the board.");
+          setStatus(selectedPiece < 0 ? "Choose a piece to begin." : "Choose an open spot on the board.");
         }
 
         function canPlace(shape, row, col) {
@@ -692,7 +704,7 @@
               const [clearRow, clearCol] = key.split(":").map(Number);
               boardElement.children[clearRow * SIZE + clearCol].classList.add("clearing");
             });
-            setStatus(cleared.length > 1 ? `${cleared.length} lines cleared. Lovely.` : "Line cleared. Nice one.", "success");
+            setStatus(cleared.length > 1 ? `${cleared.length} lines cleared.` : "Line cleared.", "success");
             clearTimer = window.setTimeout(() => {
               clearTimer = undefined;
               clearedCells.forEach(key => {
@@ -702,7 +714,7 @@
               afterPlacement();
             }, 200);
           } else {
-            setStatus("Nicely placed.", "success");
+            setStatus("Good fit.", "success");
             afterPlacement();
           }
         }
