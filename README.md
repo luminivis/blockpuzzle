@@ -14,7 +14,8 @@ fit when they arrive, but a careless placement can leave you with nowhere to go.
 
 Tap a piece, then tap a spot to place it. You can also drag a piece onto the
 board on a touchscreen or with a mouse. For keyboard play, use Tab to choose a
-piece, the arrow keys to pick a spot, and Enter to place it.
+piece, the arrow keys to pick a spot, and Enter to place it. Pick a block color
+and turn sound on or off from the controls at the top of the game.
 
 ## Scores
 
@@ -26,4 +27,16 @@ leaderboard.
 
 There are no outside images or other online assets. If you open `index.html`
 directly, it works offline. For the hosted website, visit once while online so
-your browser can save the game. Then you can play without a connection.
+your browser can save the game. Then you can play without a connection. The
+hosted game checks for updates online and replaces its offline copy when a new
+version is published. The privacy page is saved for offline use too.
+
+## Privacy
+
+The game stores your best score, block color, and sound preference in your
+browser. It does not use analytics, ads, or tracking. Read the [privacy
+policy](./privacy/) for details.
+
+## License
+
+This project is dedicated to the public domain under [CC0 1.0](./LICENSE).

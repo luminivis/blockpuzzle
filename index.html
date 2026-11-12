@@ -3,26 +3,42 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="theme-color" content="#111310">
+    <meta name="theme-color" content="#090a09">
     <meta name="description" content="A little block puzzle. Place pieces, clear lines, and see how long you can keep going.">
+    <meta name="application-version" content="3">
     <title>Block Puzzle</title>
     <style>
       :root {
         color-scheme: dark;
-        --page: #111310;
-        --panel: #191b17;
-        --panel-raised: #20231d;
-        --cell: #242720;
-        --cell-hover: #30342b;
-        --line: #30332c;
-        --text: #f0f0e9;
-        --muted: #8d9085;
+        --page: #090a09;
+        --panel: #121312;
+        --panel-raised: #191a19;
+        --cell: #1d1f1d;
+        --cell-hover: #282a28;
+        --line: #2a2c2a;
+        --text: #f0f0ee;
+        --muted: #999c96;
         --accent: #c3d078;
         --accent-dark: #9baa57;
-        --block: #c6d47f;
-        --block-highlight: #d7e39a;
+        --block: #eeeeea;
+        --block-highlight: #ffffff;
+        --block-border: #ffffff75;
+        --block-shadow: #92958b55;
         --danger: #c8a06c;
         --radius: 18px;
+      }
+
+      :root[data-block-color="olive"] {
+        --block: #c6d47f;
+        --block-highlight: #d7e39a;
+        --block-border: #dce9a530;
+        --block-shadow: #87944744;
+      }
+      :root[data-block-color="amber"] {
+        --block: #d6a86f;
+        --block-highlight: #ebc38e;
+        --block-border: #f2d5ae66;
+        --block-shadow: #8d654144;
       }
 
       * { box-sizing: border-box; }
@@ -33,9 +49,7 @@
         min-height: 100dvh;
         margin: 0;
         overflow-x: hidden;
-        background:
-          radial-gradient(ellipse at 50% 35%, rgb(101 111 65 / 8%), transparent 48%),
-          var(--page);
+        background: var(--page);
         color: var(--text);
         font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
         -webkit-font-smoothing: antialiased;
@@ -50,11 +64,11 @@
         display: flex;
         align-items: center;
         justify-content: flex-end;
-        min-height: 82px;
+        min-height: 70px;
         border-bottom: 1px solid rgb(255 255 255 / 6%);
       }
 
-      .top-actions { display: flex; align-items: center; gap: 10px; }
+      .top-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 8px; padding: 8px 0; }
       .repo-link {
         display: inline-flex;
         align-items: center;
@@ -67,6 +81,18 @@
       }
       .repo-link:hover { color: var(--text); }
       .repo-link span { color: var(--accent); }
+      .toolbar-control {
+        min-height: 36px;
+        padding: 0 10px;
+        border: 1px solid var(--line);
+        border-radius: 11px;
+        background: var(--panel);
+        color: var(--muted);
+        font-size: 11px;
+      }
+      .toolbar-control:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+      .sound-toggle { cursor: pointer; }
+      .sound-toggle[aria-pressed="true"] { border-color: #c3d07870; color: var(--text); }
       .icon-button, .reset-button {
         display: inline-flex;
         align-items: center;
@@ -113,7 +139,7 @@
         padding: 13px 18px;
         border: 1px solid var(--line);
         border-radius: 15px;
-        background: linear-gradient(145deg, #1d201a, #191b17);
+        background: var(--panel);
       }
       .score-card-label { display: block; margin-bottom: 4px; color: var(--muted); font-size: 10px; font-weight: 700; letter-spacing: .11em; text-transform: uppercase; }
       .score-value { font-variant-numeric: tabular-nums; white-space: nowrap; font-size: clamp(16px, 3.8vw, 23px); font-weight: 680; letter-spacing: -.04em; }
@@ -124,7 +150,7 @@
         padding: clamp(9px, 2.4vw, 16px);
         border: 1px solid #33362e;
         border-radius: 20px;
-        background: #191b17;
+        background: var(--panel);
         box-shadow: 0 18px 50px #00000030, inset 0 1px #ffffff08;
       }
       .board {
@@ -147,9 +173,9 @@
       }
       .board-cell:hover { background: var(--cell-hover); }
       .board-cell.filled {
-        border-color: #dce9a526;
+        border-color: var(--block-border);
         background: linear-gradient(145deg, var(--block-highlight), var(--block));
-        box-shadow: inset 0 1px #ffffff52, inset 0 -2px #87944750, 0 1px 2px #0005;
+        box-shadow: inset 0 1px var(--block-highlight), inset 0 -2px var(--block-shadow), 0 1px 2px #0005;
         cursor: default;
       }
       .board-cell.preview { background: #c3d07886; box-shadow: inset 0 0 0 1px #e6edb680; }
@@ -197,10 +223,10 @@
       .piece-block {
         width: clamp(15px, 3.2vw, 20px);
         height: clamp(15px, 3.2vw, 20px);
-        border: 1px solid #dce9a530;
+        border: 1px solid var(--block-border);
         border-radius: 4px;
         background: linear-gradient(145deg, var(--block-highlight), var(--block));
-        box-shadow: inset 0 1px #ffffff44, inset 0 -2px #87944744;
+        box-shadow: inset 0 1px var(--block-highlight), inset 0 -2px var(--block-shadow);
       }
       .piece-block.empty { visibility: hidden; }
       .sr-only {
@@ -220,7 +246,7 @@
         padding: 18px;
         border: 1px solid var(--line);
         border-radius: 16px;
-        background: linear-gradient(150deg, #1d201a, #191b17);
+        background: var(--panel);
       }
       .side-heading { display: flex; align-items: center; gap: 9px; margin: 0 0 14px; font-size: 12px; font-weight: 700; letter-spacing: .015em; }
       .side-heading svg { width: 16px; height: 16px; color: var(--accent); }
@@ -250,6 +276,8 @@
       footer { padding: 0 0 22px; color: #85877e; font-size: 10px; text-align: center; }
       footer a { color: var(--accent); text-decoration: none; }
       footer a:hover { text-decoration: underline; }
+      .footer-links { display: inline-flex; flex-wrap: wrap; justify-content: center; gap: 12px; margin-left: 8px; }
+      .app-version { display: block; margin-top: 4px; color: #707368; font-size: 10px; }
 
       .game-over {
         position: absolute;
@@ -351,6 +379,13 @@
     <div class="app-shell">
       <header class="topbar">
         <div class="top-actions">
+          <label class="sr-only" for="block-color">Block color</label>
+          <select class="toolbar-control" id="block-color" aria-label="Block color">
+            <option value="white">White blocks</option>
+            <option value="olive">Olive blocks</option>
+            <option value="amber">Amber blocks</option>
+          </select>
+          <button class="toolbar-control sound-toggle" id="sound-toggle" type="button" aria-pressed="false">Sound off</button>
           <a class="repo-link" href="https://github.com/luminivis/blockpuzzle" target="_blank" rel="noopener noreferrer">
             GitHub repo <span aria-hidden="true">↗</span>
           </a>
@@ -438,7 +473,12 @@
       </dialog>
       <footer>
         I vibe coded this with AI. It is a work in progress.
-        <a href="https://github.com/luminivis/blockpuzzle" target="_blank" rel="noopener noreferrer">Take a look at the code.</a>
+        <span class="footer-links">
+          <a href="https://github.com/luminivis/blockpuzzle" target="_blank" rel="noopener noreferrer">Take a look at the code.</a>
+          <a href="./privacy/">Privacy</a>
+          <a href="./LICENSE">License</a>
+        </span>
+        <span class="app-version">v3</span>
       </footer>
     </div>
 
@@ -447,9 +487,15 @@
         "use strict";
 
         if ("serviceWorker" in navigator && location.protocol !== "file:") {
-          navigator.serviceWorker.register("./service-worker.js").catch(error => {
-            console.error("Offline support could not be enabled.", error);
-          });
+          const hadController = Boolean(navigator.serviceWorker.controller);
+          if (hadController) {
+            navigator.serviceWorker.addEventListener("controllerchange", () => window.location.reload());
+          }
+          navigator.serviceWorker.register("./service-worker.js?v=3", { updateViaCache: "none" })
+            .then(registration => registration.update())
+            .catch(error => {
+              console.error("Offline support could not be enabled.", error);
+            });
         }
 
         const SIZE = 8;
@@ -478,6 +524,8 @@
         const gameOverCopy = document.querySelector("#game-over-copy");
         const playAgainButton = document.querySelector("#play-again");
         const newGameDialog = document.querySelector("#new-game-dialog");
+        const blockColorSelect = document.querySelector("#block-color");
+        const soundToggleButton = document.querySelector("#sound-toggle");
         let board;
         let pieces;
         let selectedPiece = -1;
@@ -491,8 +539,14 @@
         let clearTimer;
         let pointerDrag;
         let draggedButton;
+        let soundEnabled = readPreference("block-puzzle-sound", "off", ["on", "off"]) === "on";
+        let blockColor = readPreference("block-puzzle-block-color", "white", ["white", "olive", "amber"]);
+        let audioContext;
 
         bestElement.textContent = best.toLocaleString();
+        blockColorSelect.value = blockColor;
+        document.documentElement.dataset.blockColor = blockColor;
+        updateSoundButton();
         makeBoard();
         startGame();
 
@@ -512,6 +566,30 @@
           } catch (error) {
             console.warn("Could not save the best score.", error);
           }
+        }
+
+        function readPreference(key, fallback, allowedValues) {
+          try {
+            const value = localStorage.getItem(key);
+            return allowedValues.includes(value) ? value : fallback;
+          } catch (error) {
+            console.warn(`Could not read the saved ${key} preference.`, error);
+            return fallback;
+          }
+        }
+
+        function savePreference(key, value) {
+          try {
+            localStorage.setItem(key, value);
+          } catch (error) {
+            console.warn(`Could not save the ${key} preference.`, error);
+          }
+        }
+
+        function updateSoundButton() {
+          soundToggleButton.textContent = soundEnabled ? "Sound on" : "Sound off";
+          soundToggleButton.setAttribute("aria-pressed", String(soundEnabled));
+          soundToggleButton.title = soundEnabled ? "Turn sound off" : "Turn sound on";
         }
 
         function makeBoard() {
@@ -734,9 +812,11 @@
           }
 
           piece.shape.forEach(([dr, dc]) => { board[row + dr][col + dc] = true; });
+          animatePlacedBlocks(piece.shape, row, col);
           piece.used = true;
           selectedPiece = -1;
           const cleared = getCompletedLines();
+          playPlacementSound(cleared.length > 0);
           linesCleared += cleared.length;
           linesElement.textContent = linesCleared.toLocaleString();
           const clearedCells = new Set();
@@ -767,6 +847,69 @@
           } else {
             setStatus("Good fit.", "success");
             afterPlacement();
+          }
+        }
+
+        function animatePlacedBlocks(shape, row, col) {
+          if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return;
+          shape.forEach(([dr, dc], index) => {
+            const cell = boardElement.children[(row + dr) * SIZE + col + dc];
+            cell.classList.add("filled");
+            cell.setAttribute("aria-label", `Row ${row + dr + 1}, column ${col + dc + 1}, filled`);
+            cell.animate(
+              [
+                { transform: "translateY(-13px) scale(.86)", opacity: .35 },
+                { transform: "translateY(0) scale(1)", opacity: 1 }
+              ],
+              { duration: 150, delay: index * 10, easing: "cubic-bezier(.2,.8,.2,1)" }
+            );
+          });
+        }
+
+        function playPlacementSound(clearedLine) {
+          if (!soundEnabled) return;
+          const AudioContextConstructor = window.AudioContext || window.webkitAudioContext;
+          if (!AudioContextConstructor) {
+            soundEnabled = false;
+            savePreference("block-puzzle-sound", "off");
+            updateSoundButton();
+            setStatus("Sound is not supported in this browser.", "error");
+            return;
+          }
+          try {
+            audioContext ??= new AudioContextConstructor();
+          } catch (error) {
+            console.warn("Game sound could not be initialized.", error);
+            soundEnabled = false;
+            savePreference("block-puzzle-sound", "off");
+            updateSoundButton();
+            setStatus("Sound could not be started in this browser.", "error");
+            return;
+          }
+          const play = () => {
+            const now = audioContext.currentTime;
+            const frequencies = clearedLine ? [660, 880] : [440];
+            frequencies.forEach((frequency, index) => {
+              const oscillator = audioContext.createOscillator();
+              const gain = audioContext.createGain();
+              const start = now + index * .045;
+              oscillator.type = "sine";
+              oscillator.frequency.setValueAtTime(frequency, start);
+              gain.gain.setValueAtTime(.0001, start);
+              gain.gain.exponentialRampToValueAtTime(.035, start + .012);
+              gain.gain.exponentialRampToValueAtTime(.0001, start + .12);
+              oscillator.connect(gain);
+              gain.connect(audioContext.destination);
+              oscillator.start(start);
+              oscillator.stop(start + .13);
+            });
+          };
+          if (audioContext.state === "suspended") {
+            audioContext.resume().then(play).catch(error => {
+              console.warn("Game sound could not be started.", error);
+            });
+          } else {
+            play();
           }
         }
 
@@ -869,6 +1012,16 @@
         playAgainButton.addEventListener("click", () => {
           startGame();
           boardElement.children[0].focus();
+        });
+        blockColorSelect.addEventListener("change", () => {
+          blockColor = blockColorSelect.value;
+          document.documentElement.dataset.blockColor = blockColor;
+          savePreference("block-puzzle-block-color", blockColor);
+        });
+        soundToggleButton.addEventListener("click", () => {
+          soundEnabled = !soundEnabled;
+          savePreference("block-puzzle-sound", soundEnabled ? "on" : "off");
+          updateSoundButton();
         });
       })();
     </script>
