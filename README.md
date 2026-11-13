@@ -47,9 +47,9 @@ policy](./privacy/) for details.
 
 ## Sound files
 
-Optional sound assets go in `audio/`. MP3, WAV and OGG filenames and combo
-trim points are listed in `audio/README.md`. The game remains playable when an
-asset is missing; it does not generate sound effects.
+Optional sound assets go in `audio/`. Supported files and their game mappings
+are listed in `audio/README.md`. The game remains playable when an asset is
+missing; it does not generate sound effects.
 
 ## License
 

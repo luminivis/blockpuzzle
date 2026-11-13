@@ -744,7 +744,7 @@
           combo6: "combo-6x.wav",
           combo7: "combo-7x.wav",
           combo8: "combo-8x.wav",
-          newBest: Array.from({ length: 11 }, (_, index) => `newbest-${index + 1}.wav`)
+          newBest: "newbest.mp3"
         };
         const AUDIO_FORMATS = ["mp3", "wav", "ogg"];
         const THEME_KEY = "block-puzzle-theme";
@@ -1694,10 +1694,6 @@
 
         function playSound(kind, { volumeScale = 1, pitch = 1 } = {}) {
           if (!soundEnabled || volume <= 0 || !SOUND_FILES[kind]) return;
-          if (Array.isArray(SOUND_FILES[kind])) {
-            playSoundSequence(kind, SOUND_FILES[kind]);
-            return;
-          }
           let pool = soundPools.get(kind);
           if (!pool) {
             pool = [];
@@ -1719,34 +1715,6 @@
             const playback = audio.play();
             playback?.catch(() => {});
           } catch {}
-        }
-
-        function playSoundSequence(kind, files) {
-          let index = 0;
-          const playNext = () => {
-            if (!soundEnabled || volume <= 0 || index >= files.length) return;
-            const audio = createSound(kind, files[index]);
-            if (!audio) return;
-            const pool = soundPools.get(kind) || [];
-            pool.push(audio);
-            soundPools.set(kind, pool);
-            audio.volume = volume / 100;
-            const advance = () => {
-              const poolIndex = pool.indexOf(audio);
-              if (poolIndex >= 0) pool.splice(poolIndex, 1);
-              audio.removeAttribute("src");
-              audio.load();
-              index += 1;
-              playNext();
-            };
-            audio.addEventListener("ended", advance, { once: true });
-            audio.addEventListener("error", advance, { once: true });
-            try {
-              const playback = audio.play();
-              playback?.catch(() => {});
-            } catch {}
-          };
-          playNext();
         }
 
         function playPlacementSounds(blockCount) {
