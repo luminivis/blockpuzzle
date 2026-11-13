@@ -25,8 +25,9 @@ where the browser supports it.
 
 ## Scores
 
-Your score, cleared lines, and best are shown while you play. The best is saved
-in your browser and is not shared. It is just for fun, not a competitive
+Your score, cleared lines, combo and pieces are saved in your browser after a
+move, so you can continue after refreshing or reopening the page. Your best is
+also saved separately and is not shared. It is just for fun, not a competitive
 leaderboard.
 
 ## Offline
@@ -39,9 +40,16 @@ version is published. The privacy page is saved for offline use too.
 
 ## Privacy
 
-The game stores your best score and your settings (colors, sound, volume, drag and animation options) in your
-browser. It does not use analytics, ads, or tracking. Read the [privacy
+The game stores your current board, score, pieces, best score and settings
+(colors, sound, volume, drag and animation options) in your browser. It does not
+use analytics, ads, or tracking. Read the [privacy
 policy](./privacy/) for details.
+
+## Sound files
+
+Optional sound assets go in `audio/`. MP3, WAV and OGG filenames and combo
+trim points are listed in `audio/README.md`. The game remains playable when an
+asset is missing; it does not generate sound effects.
 
 ## License
 

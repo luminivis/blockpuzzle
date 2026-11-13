@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="theme-color" content="#090a09">
     <meta name="description" content="A little block puzzle. Place pieces, clear lines, and see how long you can keep going.">
-    <meta name="application-version" content="11">
+    <meta name="application-version" content="13">
     <title>Block Puzzle</title>
     <style>
       :root {
@@ -429,7 +429,7 @@
       @media (max-height: 560px) { body { overflow: auto; } }
       .board-wrap { border-color: var(--line); }
       .game-over { background: var(--overlay); border-color: var(--line); }
-      .confirm-dialog { background: var(--panel-raised); border-color: var(--line); max-height: calc(100dvh - 32px); overflow: auto; }
+      .confirm-dialog { background: var(--panel-raised); border-color: var(--line); max-height: calc(100vh - 24px); max-height: calc(100dvh - 24px); overflow: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; touch-action: pan-y; }
       .piece-button.selected { border-color: var(--accent-glow); background: var(--accent-soft); }
       .board-cell.preview { background: var(--accent-glow); }
       .board-cell.will-clear { box-shadow: inset 0 0 0 2px var(--accent), 0 0 12px var(--accent-glow); }
@@ -439,7 +439,7 @@
       .setting-row input[type=range] { width: 140px; accent-color: var(--accent); }
       .setting-row input[type=checkbox] { width: 18px; height: 18px; accent-color: var(--accent); }
       .color-pair { display: inline-flex; gap: 8px; align-items: center; }
-      .color-pair input[type=color] { width: 34px; height: 30px; padding: 0; border: 1px solid var(--line); border-radius: 8px; background: none; }
+      .color-pair input[type=color] { width: 44px; height: 40px; padding: 2px; border: 1px solid var(--line); border-radius: 8px; background: none; touch-action: manipulation; }
       .color-pair input[type=text] { width: 82px; min-height: 30px; padding: 0 8px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); color: var(--text); font: 12px ui-monospace, monospace; }
       .info-tabs { display: flex; gap: 14px; margin-bottom: 12px; font-size: 11px; }
       .info-body { max-height: 46dvh; overflow: auto; margin: 8px 0 18px; color: var(--muted); font-size: 12px; line-height: 1.65; }
@@ -452,6 +452,12 @@
       .piece-slot.spawn { animation: slotIn .38s calc(var(--i) * 70ms) both cubic-bezier(.2, .8, .2, 1); }
       @keyframes slotIn { from { opacity: 0; transform: translateY(18px) scale(.8); } to { opacity: 1; transform: none; } }
       .board-cell.clearing { animation: clearPop .36s var(--d, 0ms) both ease-in; z-index: 1; }
+      .board-cell.game-over-filling { background: linear-gradient(145deg, var(--block-highlight), var(--block)); box-shadow: inset 0 1px var(--block-highlight), inset 0 -2px var(--block-shadow), 0 1px 2px #0005; animation: gameOverFill .18s ease-out both; }
+      .board-cell.game-over-clearing { animation: gameOverClear .11s ease-in both; }
+      .board-cell.game-over-gray { border-color: #a4a7a080; background: #777a76; box-shadow: inset 0 1px #ffffff18, inset 0 -2px #00000020; }
+      .board.game-over-lock { pointer-events: none; }
+      @keyframes gameOverFill { from { opacity: .35; transform: scale(.72); } to { opacity: 1; transform: scale(1); } }
+      @keyframes gameOverClear { 45% { opacity: .65; transform: scale(1.05); } to { opacity: .15; transform: scale(.35); } }
       @keyframes clearPop { 0% { transform: scale(1); } 35% { transform: scale(1.14); background: var(--accent); box-shadow: 0 0 16px var(--accent-glow); } 100% { transform: scale(0); opacity: 0; } }
       .score-pop { position: absolute; z-index: 3; left: 50%; top: 42%; translate: -50% 0; pointer-events: none; color: var(--accent); font-size: clamp(22px, 6vw, 34px); font-weight: 720; letter-spacing: -.04em; text-align: center; text-shadow: 0 2px 14px #000a; animation: scorePop .95s ease-out forwards; }
       .score-pop.new-best { font-size: clamp(28px, 7vw, 42px); animation-duration: 2s; }
@@ -715,7 +721,7 @@
           if (hadController) {
             navigator.serviceWorker.addEventListener("controllerchange", () => window.location.reload());
           }
-          navigator.serviceWorker.register("./service-worker.js?v=11", { updateViaCache: "none" })
+          navigator.serviceWorker.register("./service-worker.js?v=13", { updateViaCache: "none" })
             .then(registration => registration.update())
             .catch(error => {
               console.error("Offline support could not be enabled.", error);
@@ -724,6 +730,35 @@
 
         const SIZE = 8;
         const COMBO_GRACE = 3; // moves without a clear that you can miss before the combo ends
+        const GAME_KEY = "block-puzzle-active-game";
+        const SOUND_FILES = {
+          pick: "pickup",
+          place: "place",
+          bad: "drop",
+          clear: "clear",
+          multiClear: "clear",
+          combo1: "combo",
+          combo2: "combo",
+          combo3: "combo",
+          combo4: "combo",
+          combo5: "combo",
+          combo6: "combo",
+          combo7: "combo",
+          combo8: "combo",
+          newSet: "pickup",
+          newBest: "newbest",
+          ui: "pickup"
+        };
+        const SOUND_TRIM_STARTS = {
+          pick: 0, place: 0, bad: 0, clear: 0, multiClear: 0,
+          combo1: 0, combo2: .5, combo3: 1, combo4: 1.5, combo5: 2, combo6: 2.5, combo7: 3, combo8: 3.5,
+          comboBroken: 0, newSet: 0, over: 0, newGame: 0, newBest: 0, ui: 0
+        };
+        const SOUND_TRIM_ENDS = {
+          combo1: .24, combo2: .74, combo3: 1.24, combo4: 1.74,
+          combo5: 2.24, combo6: 2.74, combo7: 3.24, combo8: 3.89
+        };
+        const AUDIO_FORMATS = ["mp3", "wav", "ogg"];
         const THEME_KEY = "block-puzzle-theme";
         const DEFAULT_THEME = { background: "#090a09", block: "#eeeeea", accent: "#c3d078" };
         const HEX = /^#[0-9a-f]{6}$/i;
@@ -790,7 +825,10 @@
         let busy = false;
         let statusTimer;
         let clearTimer;
+        let gameOverFrame = 0;
+        let gameOverToken = 0;
         let pointerDrag;
+        let dragGhost;
         let bestAtStart = 0;
         let newBestAnnounced = false;
         let draggedButton;
@@ -803,14 +841,15 @@
         let snapAssist = readPreference("block-puzzle-snap", "on", ["on", "off"]) === "on";
         let animationsEnabled = readPreference("block-puzzle-animations", window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ? "off" : "on", ["on", "off"]) === "on";
         let newSet = true;
-        let audioContext;
-        let audioBus;
+        const soundPools = new Map();
+        const soundStopTimers = new WeakMap();
+        let deferredSoundUnlocked = false;
 
         bestElement.textContent = formatScore(best);
         applyTheme();
         updateSoundButton();
         makeBoard();
-        startGame();
+        if (!restoreGame()) startGame();
         alignToolbarWithBoard();
         window.addEventListener("resize", alignToolbarWithBoard);
         if ("ResizeObserver" in window) new ResizeObserver(alignToolbarWithBoard).observe(gameMainElement);
@@ -891,6 +930,131 @@
           }
         }
 
+        function saveGame() {
+          if (!board || !pieces) return;
+          const state = {
+            version: 1,
+            board,
+            score,
+            best,
+            linesCleared,
+            combo,
+            missed,
+            pieces: pieces.map(piece => ({ shape: piece.shape, used: piece.used })),
+            gameEnded,
+            settings: { theme, soundEnabled, volume, animationsEnabled, snapAssist, liftPx }
+          };
+          try {
+            localStorage.setItem(GAME_KEY, JSON.stringify(state));
+          } catch (error) {
+            console.warn("Could not save the current game.", error);
+          }
+        }
+
+        function isValidShape(shape) {
+          if (!Array.isArray(shape) || shape.length < 1 || shape.length > 9) return false;
+          const cells = new Set();
+          return shape.every(cell => {
+            if (!Array.isArray(cell) || cell.length !== 2) return false;
+            const [row, col] = cell;
+            if (!Number.isInteger(row) || !Number.isInteger(col) || row < 0 || row >= SIZE || col < 0 || col >= SIZE) return false;
+            const key = `${row}:${col}`;
+            if (cells.has(key)) return false;
+            cells.add(key);
+            return true;
+          });
+        }
+
+        function isValidGameState(state) {
+          return Boolean(state && typeof state === "object" && state.version === 1
+            && Array.isArray(state.board) && state.board.length === SIZE
+            && state.board.every(row => Array.isArray(row) && row.length === SIZE && row.every(cell => typeof cell === "boolean"))
+            && Number.isSafeInteger(state.score) && state.score >= 0
+            && Number.isSafeInteger(state.linesCleared) && state.linesCleared >= 0
+            && Number.isSafeInteger(state.combo) && state.combo >= 0
+            && Number.isInteger(state.missed) && state.missed >= 0 && state.missed <= COMBO_GRACE
+            && Array.isArray(state.pieces) && state.pieces.length === 3
+            && state.pieces.every(piece => piece && typeof piece.used === "boolean" && isValidShape(piece.shape))
+            && typeof state.gameEnded === "boolean");
+        }
+
+        function restoreGame() {
+          let state;
+          try {
+            state = JSON.parse(localStorage.getItem(GAME_KEY) || "null");
+          } catch (error) {
+            console.warn("The saved game could not be read.", error);
+            return false;
+          }
+          if (!isValidGameState(state)) {
+            if (state !== null) {
+              console.warn("The saved game is invalid and has been ignored.");
+              try { localStorage.removeItem(GAME_KEY); } catch (error) { console.warn("Could not remove the invalid game save.", error); }
+            }
+            return false;
+          }
+
+          board = state.board.map(row => [...row]);
+          pieces = state.pieces.map(piece => ({ shape: piece.shape.map(cell => [...cell]), used: piece.used }));
+          score = state.score;
+          const restoredBest = Number.isSafeInteger(state.best) && state.best >= 0 ? state.best : 0;
+          if (restoredBest > best) {
+            best = restoredBest;
+            saveBest();
+          }
+          const savedSettings = state.settings;
+          if (savedSettings && typeof savedSettings === "object") {
+            if (savedSettings.theme && typeof savedSettings.theme === "object") {
+              ["background", "block", "accent"].forEach(key => {
+                if (HEX.test(savedSettings.theme[key])) theme[key] = savedSettings.theme[key].toLowerCase();
+              });
+            }
+            if (typeof savedSettings.soundEnabled === "boolean") soundEnabled = savedSettings.soundEnabled;
+            if (Number.isFinite(savedSettings.volume)) volume = Math.max(0, Math.min(100, savedSettings.volume));
+            if (Number.isFinite(savedSettings.liftPx)) liftPx = Math.max(0, Math.min(140, savedSettings.liftPx));
+            if (typeof savedSettings.snapAssist === "boolean") snapAssist = savedSettings.snapAssist;
+            if (typeof savedSettings.animationsEnabled === "boolean") animationsEnabled = savedSettings.animationsEnabled;
+            savePreference(THEME_KEY, JSON.stringify(theme));
+            savePreference("block-puzzle-sound", soundEnabled ? "on" : "off");
+            savePreference("block-puzzle-volume", String(volume));
+            savePreference("block-puzzle-lift", String(liftPx));
+            savePreference("block-puzzle-snap", snapAssist ? "on" : "off");
+            savePreference("block-puzzle-animations", animationsEnabled ? "on" : "off");
+          }
+          linesCleared = state.linesCleared;
+          combo = state.combo;
+          missed = state.missed;
+          gameEnded = state.gameEnded;
+          selectedPiece = -1;
+          busy = false;
+          bestAtStart = best;
+          bestElement.textContent = formatScore(best);
+          scoreElement.textContent = formatScore(score);
+          linesElement.textContent = linesCleared.toLocaleString();
+          updateComboStatus();
+          applyTheme();
+          updateSoundButton();
+          renderBoard();
+          renderPieces();
+          if (gameEnded) {
+            boardElement.classList.add("game-over-lock");
+            Array.from(boardElement.children).forEach(cell => { cell.classList.add("game-over-gray"); cell.disabled = true; });
+            updateGameOverCopy();
+            gameOverElement.classList.add("visible");
+            setStatus("This game is over. Start a new game when you’re ready.");
+          } else if (pieces.every(piece => piece.used)) {
+            pieces = createPieceSet();
+            newSet = true;
+            renderPieces();
+            saveGame();
+          } else if (!hasAnyMove()) {
+            triggerGameOver();
+          } else {
+            setStatus("Choose your next piece.");
+          }
+          return true;
+        }
+
         function readPreference(key, fallback, allowedValues) {
           try {
             const value = localStorage.getItem(key);
@@ -955,12 +1119,21 @@
           boardElement.append(fragment);
         }
 
-        function startGame() {
+        function startGame(playStartSound = false) {
           window.clearTimeout(statusTimer);
           window.clearTimeout(clearTimer);
+          gameOverToken += 1;
+          if (gameOverFrame) cancelAnimationFrame(gameOverFrame);
+          gameOverFrame = 0;
           pointerDrag = undefined;
           draggedButton = undefined;
           removeDragGhost();
+          boardElement.classList.remove("game-over-lock");
+          Array.from(boardElement.children).forEach(cell => {
+            cell.getAnimations().forEach(animation => animation.cancel());
+            cell.disabled = false;
+          });
+          boardWrapElement.querySelectorAll(".score-pop, .combo-toast").forEach(element => element.remove());
           bestAtStart = best;
           newBestAnnounced = false;
           board = Array.from({ length: SIZE }, () => Array(SIZE).fill(false));
@@ -975,6 +1148,7 @@
           selectedPiece = -1;
           busy = false;
           gameEnded = false;
+          boardElement.classList.remove("game-over-lock");
           scoreElement.textContent = "0";
           linesElement.textContent = "0";
           gameOverElement.classList.remove("visible");
@@ -982,6 +1156,8 @@
           renderBoard();
           renderPieces();
           setStatus("Pick a piece to get started.");
+          saveGame();
+          if (playStartSound) playSound("newGame");
         }
 
         function createPieceSet() {
@@ -1051,7 +1227,7 @@
               const cell = cells[row * SIZE + col];
               const filled = board[row][col];
               cell.classList.toggle("filled", filled);
-              cell.classList.remove("preview", "invalid-preview", "clearing", "will-clear");
+              cell.classList.remove("preview", "invalid-preview", "clearing", "will-clear", "game-over-filling", "game-over-clearing", "game-over-gray");
               cell.setAttribute("aria-label", `Row ${row + 1}, column ${col + 1}, ${filled ? "filled" : "empty"}`);
             }
           }
@@ -1125,6 +1301,7 @@
               button.classList.remove("dragging");
               if (target) {
                 placeSelected(target.row, target.col);
+                if (!fits) clearPreview();
               } else {
                 selectedPiece = -1;
                 button.classList.remove("selected");
@@ -1141,6 +1318,18 @@
                 selectedPiece = -1;
                 button.classList.remove("selected");
                 button.setAttribute("aria-pressed", "false");
+                clearPreview();
+                setStatus("Drag cancelled.");
+              }
+              pointerDrag = undefined;
+            });
+            button.addEventListener("lostpointercapture", event => {
+              if (!pointerDrag || pointerDrag.pointerId !== event.pointerId) return;
+              if (pointerDrag.dragging) {
+                removeDragGhost();
+                button.classList.remove("dragging", "selected");
+                button.setAttribute("aria-pressed", "false");
+                selectedPiece = -1;
                 clearPreview();
                 setStatus("Drag cancelled.");
               }
@@ -1168,6 +1357,7 @@
         }
 
         function createDragGhost(shape, button) {
+          removeDragGhost();
           const firstRect = boardElement.children[0].getBoundingClientRect();
           const nextRect = boardElement.children[1].getBoundingClientRect();
           const size = firstRect.width;
@@ -1189,7 +1379,7 @@
             }
           }
           document.body.append(element);
-          return {
+          dragGhost = {
             element,
             size,
             gap,
@@ -1201,6 +1391,7 @@
             fromRect: button.getBoundingClientRect(),
             started: false
           };
+          return dragGhost;
         }
 
         // Like Block Blast: the piece pops up to board size and floats above a finger or pen.
@@ -1249,8 +1440,15 @@
           if (!animationsEnabled) { ghost.element.remove(); return; }
           const to = button.getBoundingClientRect();
           const end = `translate(${to.left + to.width / 2 - ghost.width / 2}px, ${to.top + to.height / 2 - ghost.height / 2}px) scale(.45)`;
-          ghost.element.animate([{ transform: ghost.element.style.transform, opacity: 1 }, { transform: end, opacity: .2 }], { duration: 180, easing: "ease-in" })
-            .onfinish = () => ghost.element.remove();
+          const animation = ghost.element.animate([{ transform: ghost.element.style.transform, opacity: 1 }, { transform: end, opacity: .2 }], { duration: 180, easing: "ease-in" });
+          animation.onfinish = () => {
+            ghost.element.remove();
+            if (dragGhost === ghost) dragGhost = undefined;
+          };
+          animation.oncancel = () => {
+            ghost.element.remove();
+            if (dragGhost === ghost) dragGhost = undefined;
+          };
         }
 
         function markClears(shape, row, col) {
@@ -1348,7 +1546,11 @@
         }
 
         function removeDragGhost() {
-          document.querySelectorAll(".drag-ghost").forEach(element => element.remove());
+          document.querySelectorAll(".drag-ghost").forEach(element => {
+            element.getAnimations().forEach(animation => animation.cancel());
+            element.remove();
+          });
+          dragGhost = undefined;
         }
 
         function selectPiece(index, returnFocusToBoard = false) {
@@ -1418,14 +1620,23 @@
             }
           }
           updateComboStatus();
+          playPlacementSounds(piece.shape.length);
+          if (cleared.length > 1) playSound("multiClear");
+          else if (cleared.length === 1) playSound("clear");
+          if (cleared.length) playSound(`combo${Math.min(combo, 8)}`);
           if (comboBroken) playSound("comboBroken");
-          else playSound(cleared.length ? (combo > 1 ? "combo" : "clear") : "place", cleared.length ? Math.max(combo, cleared.length) : piece.shape.length);
           const comboBonus = cleared.length ? 25 * combo * (combo - 1) : 0; // 50, 150, 300, 500 ...
           const earned = piece.shape.length * 10 + cleared.length * 100 + Math.max(0, cleared.length - 1) * 50 + comboBonus;
           const newBest = updateScore(earned);
           showScorePop(earned, cleared.length, newBest);
+          if (newBest) playSound("newBest");
           if (clearedCells.size) {
             busy = true;
+            clearedCells.forEach(key => {
+              const [clearRow, clearCol] = key.split(":").map(Number);
+              board[clearRow][clearCol] = false;
+            });
+            saveGame();
             clearedCells.forEach(key => {
               const [clearRow, clearCol] = key.split(":").map(Number);
               const clearingCell = boardElement.children[clearRow * SIZE + clearCol];
@@ -1435,10 +1646,6 @@
             setStatus(combo > 1 ? `Combo x${combo}! +${comboBonus} bonus.` : cleared.length > 1 ? `${cleared.length} lines cleared.` : "Line cleared.", "success");
             clearTimer = window.setTimeout(() => {
               clearTimer = undefined;
-              clearedCells.forEach(key => {
-                const [clearRow, clearCol] = key.split(":").map(Number);
-                board[clearRow][clearCol] = false;
-              });
               afterPlacement();
             }, animationsEnabled ? 380 : 0);
           } else {
@@ -1466,105 +1673,98 @@
           });
         }
 
-        function playSound(kind, amount = 1) {
-          if (!soundEnabled || volume <= 0) return;
-          const AudioContextConstructor = window.AudioContext || window.webkitAudioContext;
-          const turnOff = message => {
-            soundEnabled = false;
-            savePreference("block-puzzle-sound", "off");
-            updateSoundButton();
-            setStatus(message, "error");
+        function createSound(kind) {
+          if (typeof Audio === "undefined") return null;
+          const audio = new Audio();
+          audio.preload = "none";
+          audio.playsInline = true;
+          audio.volume = volume / 100;
+          const formats = [...AUDIO_FORMATS].sort((a, b) => {
+            const mime = { mp3: "audio/mpeg", wav: "audio/wav", ogg: "audio/ogg" };
+            return Number(audio.canPlayType(mime[b]) !== "") - Number(audio.canPlayType(mime[a]) !== "");
+          });
+          const setSource = index => {
+            if (index >= formats.length) return;
+            audio.src = `./audio/${SOUND_FILES[kind]}.${formats[index]}`;
+            audio.addEventListener("error", () => setSource(index + 1), { once: true });
           };
-          if (!AudioContextConstructor) return turnOff("Sound is not supported in this browser.");
-          try {
-            audioContext ??= new AudioContextConstructor();
-            if (!audioBus) {
-              audioBus = audioContext.createGain();
-              const compressor = audioContext.createDynamicsCompressor();
-              compressor.threshold.value = -18;
-              compressor.knee.value = 12;
-              compressor.ratio.value = 4;
-              compressor.attack.value = .004;
-              compressor.release.value = .12;
-              audioBus.connect(compressor);
-              compressor.connect(audioContext.destination);
-            }
-          } catch (error) {
-            console.warn("Game sound could not be initialized.", error);
-            return turnOff("Sound could not be started in this browser.");
+          setSource(0);
+          return audio;
+        }
+
+        function playSound(kind, { volumeScale = 1, pitch = 1 } = {}) {
+          if (!soundEnabled || volume <= 0 || !SOUND_FILES[kind]) return;
+          let pool = soundPools.get(kind);
+          if (!pool) {
+            pool = [];
+            soundPools.set(kind, pool);
           }
-          const play = () => {
-            const now = audioContext.currentTime;
-            audioBus.gain.setTargetAtTime(volume / 100 * .24, now, .04);
-            const tone = (from, at, length, type = "sine", level = 1, to = from, detune = 0, filterFrequency = 1800, attack = .012) => {
-              const oscillator = audioContext.createOscillator();
-              const gain = audioContext.createGain();
-              const filter = audioContext.createBiquadFilter();
-              oscillator.type = type;
-              oscillator.detune.setValueAtTime(detune, now + at);
-              oscillator.frequency.setValueAtTime(from, now + at);
-              oscillator.frequency.exponentialRampToValueAtTime(to, now + at + length * .9);
-              filter.type = "lowpass";
-              filter.frequency.setValueAtTime(filterFrequency, now + at);
-              filter.Q.setValueAtTime(.6, now + at);
-              gain.gain.setValueAtTime(.0001, now + at);
-              gain.gain.exponentialRampToValueAtTime(level * .7, now + at + Math.min(attack, length * .5));
-              gain.gain.exponentialRampToValueAtTime(.0001, now + at + length + .08);
-              oscillator.connect(filter);
-              filter.connect(gain);
-              gain.connect(audioBus);
-              oscillator.start(now + at);
-              oscillator.stop(now + at + length + .12);
-            };
-            if (kind === "pick") {
-              tone(392, 0, .16, "sine", .24, 468, 4, 1600);
-              tone(523.25, .03, .14, "triangle", .16, 610, -3, 1500);
+          let audio = pool.find(item => item.paused || item.ended);
+          if (!audio && pool.length < (kind === "place" ? 9 : 3)) {
+            audio = createSound(kind);
+            if (!audio) return;
+            pool.push(audio);
+          }
+          if (!audio) return;
+          audio.volume = Math.max(0, Math.min(1, volume / 100 * volumeScale));
+          audio.playbackRate = pitch;
+          audio.preservesPitch = false;
+          audio.webkitPreservesPitch = false;
+          try {
+            const trimStart = SOUND_TRIM_STARTS[kind] || 0;
+            if (audio.readyState > 0) audio.currentTime = trimStart;
+            else if (trimStart > 0) {
+              audio.addEventListener("loadedmetadata", () => {
+                if (!audio.paused && audio.currentTime < trimStart) audio.currentTime = trimStart;
+              }, { once: true });
             }
-            if (kind === "place") {
-              const blockCount = Math.min(5, Math.max(1, Math.floor(amount)));
-              for (let index = 0; index < blockCount; index += 1) {
-                const at = index * .035;
-                tone(142 - index * 4, at, .11, "sine", .22, 94 - index * 3, 0, 520, .006);
-                tone(620 - index * 26, at, .075, "triangle", .19, 390 - index * 18, index % 2 ? -3 : 3, 1500, .004);
-              }
+            const playback = audio.play();
+            playback?.catch(() => {});
+            const trimEnd = SOUND_TRIM_ENDS[kind];
+            if (Number.isFinite(trimEnd)) {
+              const scheduleStop = () => {
+                const previousTimer = soundStopTimers.get(audio);
+                if (previousTimer) clearTimeout(previousTimer);
+                const remainingMs = Math.max(0, (trimEnd - audio.currentTime) / audio.playbackRate * 1000);
+                const timer = window.setTimeout(() => {
+                  if (!audio.paused && audio.currentTime < trimEnd + .04) audio.pause();
+                  soundStopTimers.delete(audio);
+                }, remainingMs);
+                soundStopTimers.set(audio, timer);
+              };
+              if (playback?.then) playback.then(scheduleStop).catch(() => {});
+              else scheduleStop();
             }
-            if (kind === "bad") {
-              tone(165, 0, .14, "triangle", .12, 120, 2, 1050);
-              tone(110, .03, .13, "sine", .08, 92, -4, 900);
-            }
-            if (kind === "clear") {
-              const notes = [523.25, 659.25, 783.99, 1046.5];
-              const lift = Math.min(Math.max(0, amount - 1), 4) * 24;
-              tone(196, 0, .16, "triangle", .16, 150, 2, 1200, .018);
-              notes.slice(0, Math.min(3 + Math.floor(amount / 2), notes.length)).forEach((note, index) => {
-                const frequency = note + lift;
-                tone(frequency, .035 + index * .075, .2, "sine", .19 - index * .02, frequency * 1.02, index % 2 === 0 ? 4 : -5, 2100, .014);
-              });
-            }
-            if (kind === "combo") {
-              const level = Math.min(8, Math.max(2, Math.floor(amount)));
-              const root = 392 + level * 22;
-              const intervals = [0, 4, 7, 12];
-              tone(164, 0, .14, "sine", .14, 120, 0, 650, .01);
-              intervals.forEach((semitones, index) => {
-                const frequency = root * 2 ** (semitones / 12);
-                tone(frequency, .025 + index * .085, .24, index === 3 ? "triangle" : "sine", .18 + index * .015, frequency * 1.015, index % 2 ? -3 : 3, 2400, .012);
-              });
-            }
-            if (kind === "comboBroken") {
-              tone(392, 0, .2, "triangle", .11, 311.13, -2, 1050, .025);
-              tone(293.66, .14, .24, "sine", .09, 196, -3, 850, .03);
-            }
-            if (kind === "over") {
-              [392, 349.23, 293.66, 261.63, 220, 196].forEach((frequency, index) => {
-                tone(frequency, index * .27, .38, "triangle", .13, frequency * .84, index % 2 ? -2 : 2, 1050, .045);
-              });
-            }
-          };
-          if (audioContext.state === "suspended") {
-            audioContext.resume().then(play).catch(error => console.warn("Game sound could not be started.", error));
-          } else {
-            play();
+          } catch {}
+        }
+
+        function playPlacementSounds(blockCount) {
+          const count = Math.max(1, Math.min(9, Math.floor(blockCount)));
+          for (let index = 0; index < count; index += 1) {
+            playSound("place", {
+              volumeScale: 1 / 2 ** index,
+              pitch: 2 ** (index * 2 / 12)
+            });
+          }
+        }
+
+        function unlockDeferredSound() {
+          if (deferredSoundUnlocked || !soundEnabled || !SOUND_FILES.over || typeof Audio === "undefined") return;
+          deferredSoundUnlocked = true;
+          const audio = createSound("over");
+          if (!audio) return;
+          const pool = soundPools.get("over") || [];
+          pool.push(audio);
+          soundPools.set("over", pool);
+          audio.muted = true;
+          try {
+            audio.play()?.then(() => {
+              audio.pause();
+              if (audio.readyState > 0) audio.currentTime = 0;
+              audio.muted = false;
+            }).catch(() => { audio.muted = false; });
+          } catch {
+            audio.muted = false;
           }
         }
 
@@ -1583,27 +1783,104 @@
           busy = false;
           if (pieces.every(piece => piece.used)) {
             pieces = createPieceSet();
-          newSet = true;
+            newSet = true;
+            playSound("newSet");
           }
           renderPieces();
           if (!hasAnyMove()) {
-            selectedPiece = -1;
-            gameEnded = true;
-            Array.from(boardElement.children).forEach(cell => { cell.disabled = true; });
-            renderPieces();
-            const lineWord = linesCleared === 1 ? "line" : "lines";
-            const newRecord = newBestAnnounced;
-            gameOverCopy.textContent = `${newRecord ? "New best! " : ""}You scored ${score.toLocaleString()} points and cleared ${linesCleared.toLocaleString()} ${lineWord}. Fancy another round?`;
-            gameOverElement.classList.add("visible");
-            playSound("over");
-            playAgainButton.focus();
-            setStatus("No more pieces fit. Start a new game when you’re ready.");
+            triggerGameOver();
             return;
           }
+          saveGame();
           window.clearTimeout(statusTimer);
           statusTimer = window.setTimeout(() => {
             setStatus("Choose your next piece.");
           }, 1250);
+        }
+
+        function updateGameOverCopy() {
+          const lineWord = linesCleared === 1 ? "line" : "lines";
+          gameOverCopy.textContent = `You scored ${score.toLocaleString()} points and cleared ${linesCleared.toLocaleString()} ${lineWord}. Fancy another round?`;
+        }
+
+        function triggerGameOver() {
+          selectedPiece = -1;
+          gameEnded = true;
+          busy = true;
+          boardElement.classList.add("game-over-lock");
+          Array.from(boardElement.children).forEach(cell => { cell.disabled = true; });
+          renderPieces();
+          updateGameOverCopy();
+          saveGame();
+          startGameOverAnimation();
+          setStatus("No more pieces fit. Start a new game when you’re ready.");
+        }
+
+        function startGameOverAnimation() {
+          const cells = Array.from(boardElement.children);
+          const token = ++gameOverToken;
+          const emptyCells = cells.filter((_, index) => !board[Math.floor(index / SIZE)][index % SIZE]);
+          const startedAt = performance.now();
+          const holdDuration = 220;
+          const fillDuration = 1180;
+          const clearStart = holdDuration + fillDuration;
+          const rowInterval = 72;
+          const clearDuration = 110;
+          let revealed = 0;
+          const clearingRows = new Set();
+          const clearedRows = new Set();
+
+          const finish = () => {
+            if (token !== gameOverToken) return;
+            if (gameOverFrame) cancelAnimationFrame(gameOverFrame);
+            gameOverFrame = 0;
+            cells.forEach(cell => {
+              cell.classList.remove("filled", "game-over-filling", "game-over-clearing");
+              cell.classList.add("game-over-gray");
+            });
+            busy = false;
+            gameOverElement.classList.add("visible");
+            playSound("over");
+            playAgainButton.focus();
+          };
+
+          if (!animationsEnabled) {
+            finish();
+            return;
+          }
+
+          const frame = now => {
+            if (token !== gameOverToken) return;
+            if (!animationsEnabled) { finish(); return; }
+            const elapsed = now - startedAt;
+            if (elapsed >= holdDuration) {
+              const fillProgress = Math.min(1, (elapsed - holdDuration) / fillDuration);
+              const targetCount = Math.ceil(fillProgress * emptyCells.length);
+              while (revealed < targetCount) {
+                emptyCells[revealed].classList.add("game-over-filling");
+                revealed += 1;
+              }
+            }
+            for (let order = 0; order < SIZE; order += 1) {
+              const row = SIZE - 1 - order;
+              const rowStart = clearStart + order * rowInterval;
+              if (elapsed >= rowStart && !clearingRows.has(row)) {
+                clearingRows.add(row);
+                for (let col = 0; col < SIZE; col += 1) cells[row * SIZE + col].classList.add("game-over-clearing");
+              }
+              if (elapsed >= rowStart + clearDuration && !clearedRows.has(row)) {
+                clearedRows.add(row);
+                for (let col = 0; col < SIZE; col += 1) {
+                  const cell = cells[row * SIZE + col];
+                  cell.classList.remove("filled", "game-over-filling", "game-over-clearing");
+                  cell.classList.add("game-over-gray");
+                }
+              }
+            }
+            if (clearedRows.size === SIZE) finish();
+            else gameOverFrame = requestAnimationFrame(frame);
+          };
+          gameOverFrame = requestAnimationFrame(frame);
         }
 
         function hasAnyMove() {
@@ -1699,7 +1976,7 @@
         const animInput = document.querySelector("#anim");
         const INFO = {
           help: ["How to play", "<p>Touch a piece, drag it onto the board and let go. It floats above your finger so your hand does not cover it, and it snaps to the closest spot that fits. Highlighted lines will clear.</p><p>Fill a whole row or column to clear it. Each set of three can always be placed. You can also tap a piece and then a spot, or use 1, 2, 3, the arrow keys and Enter. Escape puts a piece back.</p><p>Combo: clear lines on back-to-back moves to build a streak. Each extra step adds more bonus: 50, 150, 300, 500 and so on. You can miss up to three moves without clearing (the dots show how many you have left), the fourth miss ends it.</p>"],
-          privacy: ["Privacy", "<p>Block Puzzle is a small single-player game with no account, analytics, ads or tracking.</p><p>Your browser stores your best score, your chosen colors, sound and volume, and your drag and animation settings. Your current board and score stay in memory while the page is open and are not saved or sent anywhere.</p><p>The site may keep an offline copy in your browser. Clearing this site's data in your browser removes it and the saved settings. The hosted site runs on GitHub Pages, which may process technical details such as your IP address when it serves a page.</p>"],
+          privacy: ["Privacy", "<p>Block Puzzle is a small single-player game with no account, analytics, ads or tracking.</p><p>Your browser stores your current board, score, pieces, best score, colors, sound and volume, and your drag and animation settings. This data stays in your browser and is not sent to a server.</p><p>The site may keep an offline copy in your browser. Clearing this site's data in your browser removes it and the saved settings. The hosted site runs on GitHub Pages, which may process technical details such as your IP address when it serves a page.</p>"],
           license: ["License", ""]
         };
         function openDialog(dialog) {
@@ -1739,10 +2016,10 @@
         colorRows.forEach(([key, label]) => {
           const row = document.createElement("div");
           row.className = "setting-row";
-          row.innerHTML = `<span>${label}</span><span class="color-pair"><input type="color" data-key="${key}" aria-label="${label} color"><input type="text" data-hex="${key}" maxlength="7" spellcheck="false" aria-label="${label} hex value"></span>`;
+          row.innerHTML = `<span>${label}</span><span class="color-pair"><input type="color" data-key="${key}" aria-label="${label} color"><input type="text" data-hex="${key}" maxlength="7" inputmode="text" autocapitalize="off" autocorrect="off" spellcheck="false" aria-label="${label} hex value"></span>`;
           colorHost.append(row);
         });
-        colorHost.addEventListener("input", event => {
+        const applyColorInput = event => {
           const key = event.target.dataset.key || event.target.dataset.hex;
           if (!key) return;
           let value = event.target.value.trim();
@@ -1751,14 +2028,21 @@
           theme[key] = value.toLowerCase();
           applyTheme();
           savePreference(THEME_KEY, JSON.stringify(theme));
+          saveGame();
           if (event.target.dataset.key) document.querySelector(`[data-hex="${key}"]`).value = theme[key];
           else document.querySelector(`[data-key="${key}"]`).value = theme[key];
+        };
+        colorHost.addEventListener("input", applyColorInput);
+        colorHost.addEventListener("change", applyColorInput);
+        volumeInput.addEventListener("input", () => {
+          volume = Number(volumeInput.value);
+          soundPools.forEach(pool => pool.forEach(audio => { audio.volume = volume / 100; }));
+          savePreference("block-puzzle-volume", String(volume));
+          saveGame();
         });
-        volumeInput.addEventListener("input", () => { volume = Number(volumeInput.value); savePreference("block-puzzle-volume", String(volume)); });
-        volumeInput.addEventListener("change", () => playSound("place"));
-        liftInput.addEventListener("input", () => { liftPx = Number(liftInput.value); savePreference("block-puzzle-lift", String(liftPx)); });
-        snapInput.addEventListener("change", () => { snapAssist = snapInput.checked; savePreference("block-puzzle-snap", snapAssist ? "on" : "off"); });
-        animInput.addEventListener("change", () => { animationsEnabled = animInput.checked; savePreference("block-puzzle-animations", animationsEnabled ? "on" : "off"); });
+        liftInput.addEventListener("input", () => { liftPx = Number(liftInput.value); savePreference("block-puzzle-lift", String(liftPx)); saveGame(); });
+        snapInput.addEventListener("change", () => { snapAssist = snapInput.checked; savePreference("block-puzzle-snap", snapAssist ? "on" : "off"); saveGame(); });
+        animInput.addEventListener("change", () => { animationsEnabled = animInput.checked; savePreference("block-puzzle-animations", animationsEnabled ? "on" : "off"); saveGame(); });
         document.querySelector("#reset-settings").addEventListener("click", () => {
           theme = { ...DEFAULT_THEME };
           soundEnabled = true;
@@ -1775,6 +2059,7 @@
           applyTheme();
           updateSoundButton();
           syncSettings();
+          saveGame();
         });
         document.querySelector("#settings-button").addEventListener("click", () => { syncSettings(); openDialog(settingsDialog); });
         document.querySelector("#close-settings").addEventListener("click", () => closeDialog(settingsDialog));
@@ -1805,6 +2090,7 @@
           } catch (error) {
             console.warn("Could not clear the saved best score.", error);
           }
+          saveGame();
           closeDialog(resetBestDialog);
         });
         document.querySelector("#info-button").addEventListener("click", () => showInfo("help"));
@@ -1841,20 +2127,29 @@
             newGameDialog.showModal();
             return;
           }
-          startGame();
+          startGame(true);
         });
         newGameDialog.addEventListener("close", () => {
-          if (newGameDialog.returnValue === "restart") startGame();
+          if (newGameDialog.returnValue === "restart") startGame(true);
         });
         playAgainButton.addEventListener("click", () => {
-          startGame();
+          startGame(true);
           boardElement.children[0].focus();
         });
         soundToggleButton.addEventListener("click", () => {
           soundEnabled = !soundEnabled;
           savePreference("block-puzzle-sound", soundEnabled ? "on" : "off");
           updateSoundButton();
-          if (soundEnabled) playSound("pick");
+          saveGame();
+          if (soundEnabled) playSound("ui");
+          else soundPools.forEach(pool => pool.forEach(audio => audio.pause()));
+        });
+        document.addEventListener("pointerdown", unlockDeferredSound);
+        document.addEventListener("keydown", unlockDeferredSound);
+        document.addEventListener("click", event => {
+          if (!soundEnabled || !event.isTrusted || !event.target.closest?.("button")) return;
+          if (event.target.closest(".piece-button, .board-cell, #sound-toggle")) return;
+          playSound("ui");
         });
       })();
     </script>
