@@ -1722,7 +1722,7 @@
           for (let index = 0; index < count; index += 1) {
             playSound("place", {
               volumeScale: 1 / 2 ** index,
-              pitch: 2 ** (index * 2 / 12)
+              pitch: 2 ** (index / 12)
             });
           }
         }
