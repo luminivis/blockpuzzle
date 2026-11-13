@@ -10,12 +10,16 @@ It is a work in progress, so there may still be a few rough edges.
 
 Pick a piece and put it on the 8 by 8 board. Fill a whole row or column to clear
 it. You get three pieces at a time. Each new set is picked so all three pieces
-fit when they arrive, but a careless placement can leave you with nowhere to go.
+can be placed one after another when they arrive, but a careless placement can leave you with nowhere to go.
 
 Tap a piece, then tap a spot to place it. You can also drag a piece onto the
-board on a touchscreen or with a mouse. For keyboard play, use Tab to choose a
-piece, the arrow keys to pick a spot, and Enter to place it. Pick a block color
-and turn sound on or off from the controls at the top of the game.
+board on a touchscreen or with a mouse. On a touchscreen the piece floats above
+your finger so your hand does not cover it. For keyboard play, press 1, 2 or 3
+(or use Tab) to choose a piece, the arrow keys to pick a spot, and Enter to
+place it. Escape puts a piece back. Open the settings (gear button) to set your own
+background, block and accent colors, change the sound and volume, and tune the
+dragging. Help, privacy and license open as popups, and the full screen button
+fills the display where the browser supports it.
 
 ## Scores
 
@@ -33,10 +37,15 @@ version is published. The privacy page is saved for offline use too.
 
 ## Privacy
 
-The game stores your best score, block color, and sound preference in your
+The game stores your best score and your settings (colors, sound, volume, drag and animation options) in your
 browser. It does not use analytics, ads, or tracking. Read the [privacy
 policy](./privacy/) for details.
 
 ## License
 
 This project is dedicated to the public domain under [CC0 1.0](./LICENSE).
+
+Combo: clear lines on back-to-back moves to build a streak. Each extra step adds more
+bonus (50, 150, 300, 500 and so on). You can miss up to three moves without a
+clear; the dots on the combo badge show how many you have left, and the fourth
+miss ends it.
