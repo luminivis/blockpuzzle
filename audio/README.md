@@ -6,8 +6,8 @@ The game currently uses these supplied files:
 - `place.mp3`: one layer per block placed
 - `drop.mp3`: invalid placement
 - `clear.mp3`: one or multiple lines cleared
-- `combo.mp3`: eight combo cues, trimmed at 0, 0.5, 1, 1.5, 2, 2.5, 3 and 3.5 seconds
-- `newbest.mp3`: new best score
+- `combo-1x.wav` through `combo-8x.wav`: the eight cues cut from `combo.mp3`
+- `newbest-1.wav` through `newbest-11.wav`: the supplied `newbest.mp3` played in order
 
 New-piece and UI feedback reuse `pickup.mp3`; multi-line clears reuse
 `clear.mp3`. Game-over, new-game and combo-break sounds stay silent until a

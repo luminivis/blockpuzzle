@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="theme-color" content="#090a09">
     <meta name="description" content="A little block puzzle. Place pieces, clear lines, and see how long you can keep going.">
-    <meta name="application-version" content="13">
+    <meta name="application-version" content="14">
     <title>Block Puzzle</title>
     <style>
       :root {
@@ -454,7 +454,6 @@
       .board-cell.clearing { animation: clearPop .36s var(--d, 0ms) both ease-in; z-index: 1; }
       .board-cell.game-over-filling { background: linear-gradient(145deg, var(--block-highlight), var(--block)); box-shadow: inset 0 1px var(--block-highlight), inset 0 -2px var(--block-shadow), 0 1px 2px #0005; animation: gameOverFill .18s ease-out both; }
       .board-cell.game-over-clearing { animation: gameOverClear .11s ease-in both; }
-      .board-cell.game-over-gray { border-color: #a4a7a080; background: #777a76; box-shadow: inset 0 1px #ffffff18, inset 0 -2px #00000020; }
       .board.game-over-lock { pointer-events: none; }
       @keyframes gameOverFill { from { opacity: .35; transform: scale(.72); } to { opacity: 1; transform: scale(1); } }
       @keyframes gameOverClear { 45% { opacity: .65; transform: scale(1.05); } to { opacity: .15; transform: scale(.35); } }
@@ -721,7 +720,7 @@
           if (hadController) {
             navigator.serviceWorker.addEventListener("controllerchange", () => window.location.reload());
           }
-          navigator.serviceWorker.register("./service-worker.js?v=13", { updateViaCache: "none" })
+          navigator.serviceWorker.register("./service-worker.js?v=14", { updateViaCache: "none" })
             .then(registration => registration.update())
             .catch(error => {
               console.error("Offline support could not be enabled.", error);
@@ -733,30 +732,19 @@
         const GAME_KEY = "block-puzzle-active-game";
         const SOUND_FILES = {
           pick: "pickup",
+          drop: "drop",
           place: "place",
-          bad: "drop",
           clear: "clear",
           multiClear: "clear",
-          combo1: "combo",
-          combo2: "combo",
-          combo3: "combo",
-          combo4: "combo",
-          combo5: "combo",
-          combo6: "combo",
-          combo7: "combo",
-          combo8: "combo",
-          newSet: "pickup",
-          newBest: "newbest",
-          ui: "pickup"
-        };
-        const SOUND_TRIM_STARTS = {
-          pick: 0, place: 0, bad: 0, clear: 0, multiClear: 0,
-          combo1: 0, combo2: .5, combo3: 1, combo4: 1.5, combo5: 2, combo6: 2.5, combo7: 3, combo8: 3.5,
-          comboBroken: 0, newSet: 0, over: 0, newGame: 0, newBest: 0, ui: 0
-        };
-        const SOUND_TRIM_ENDS = {
-          combo1: .24, combo2: .74, combo3: 1.24, combo4: 1.74,
-          combo5: 2.24, combo6: 2.74, combo7: 3.24, combo8: 3.89
+          combo1: "combo-1x.wav",
+          combo2: "combo-2x.wav",
+          combo3: "combo-3x.wav",
+          combo4: "combo-4x.wav",
+          combo5: "combo-5x.wav",
+          combo6: "combo-6x.wav",
+          combo7: "combo-7x.wav",
+          combo8: "combo-8x.wav",
+          newBest: Array.from({ length: 11 }, (_, index) => `newbest-${index + 1}.wav`)
         };
         const AUDIO_FORMATS = ["mp3", "wav", "ogg"];
         const THEME_KEY = "block-puzzle-theme";
@@ -842,8 +830,6 @@
         let animationsEnabled = readPreference("block-puzzle-animations", window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ? "off" : "on", ["on", "off"]) === "on";
         let newSet = true;
         const soundPools = new Map();
-        const soundStopTimers = new WeakMap();
-        let deferredSoundUnlocked = false;
 
         bestElement.textContent = formatScore(best);
         applyTheme();
@@ -1038,7 +1024,11 @@
           renderPieces();
           if (gameEnded) {
             boardElement.classList.add("game-over-lock");
-            Array.from(boardElement.children).forEach(cell => { cell.classList.add("game-over-gray"); cell.disabled = true; });
+            Array.from(boardElement.children).forEach((cell, index) => {
+              cell.classList.remove("filled", "game-over-filling", "game-over-clearing", "game-over-gray");
+              cell.setAttribute("aria-label", `Row ${Math.floor(index / SIZE) + 1}, column ${index % SIZE + 1}, empty`);
+              cell.disabled = true;
+            });
             updateGameOverCopy();
             gameOverElement.classList.add("visible");
             setStatus("This game is over. Start a new game when you’re ready.");
@@ -1273,6 +1263,7 @@
               if (!pointerDrag.dragging) {
                 pointerDrag.dragging = true;
                 pointerDrag.ghost = createDragGhost(piece.shape, button);
+                playSound("pick");
                 selectedPiece = index;
                 button.classList.add("selected", "dragging");
                 button.setAttribute("aria-pressed", "true");
@@ -1298,6 +1289,7 @@
               const target = dragTarget(drag.ghost);
               const fits = Boolean(target) && canPlace(drag.ghost.shape, target.row, target.col);
               if (fits) removeDragGhost(); else flyBack(drag.ghost, button);
+              if (!fits) playSound("drop");
               button.classList.remove("dragging");
               if (target) {
                 placeSelected(target.row, target.col);
@@ -1307,6 +1299,7 @@
                 button.classList.remove("selected");
                 button.setAttribute("aria-pressed", "false");
                 clearPreview();
+                playSound("drop");
                 setStatus("Drop the piece on the board to place it.");
               }
             });
@@ -1314,6 +1307,7 @@
               if (!pointerDrag || pointerDrag.pointerId !== event.pointerId) return;
               if (pointerDrag.dragging) {
                 removeDragGhost();
+                playSound("drop");
                 button.classList.remove("dragging");
                 selectedPiece = -1;
                 button.classList.remove("selected");
@@ -1327,6 +1321,7 @@
               if (!pointerDrag || pointerDrag.pointerId !== event.pointerId) return;
               if (pointerDrag.dragging) {
                 removeDragGhost();
+                playSound("drop");
                 button.classList.remove("dragging", "selected");
                 button.setAttribute("aria-pressed", "false");
                 selectedPiece = -1;
@@ -1555,8 +1550,10 @@
 
         function selectPiece(index, returnFocusToBoard = false) {
           if (busy || gameEnded || scoreInfoElement.classList.contains("visible") || pieces[index].used) return;
+          const previousSelection = selectedPiece;
           selectedPiece = selectedPiece === index ? -1 : index;
           if (selectedPiece >= 0) playSound("pick");
+          else if (previousSelection === index) playSound("drop");
           renderPieces();
           if (returnFocusToBoard) boardElement.children[focusedCellIndex].focus();
           clearPreview();
@@ -1580,7 +1577,6 @@
           const piece = pieces[selectedPiece];
           if (!canPlace(piece.shape, row, col)) {
             setStatus("That piece doesn’t fit there.", "error");
-            playSound("bad");
             const boardWrap = document.querySelector(".board-wrap");
             boardWrap.animate(
               [{ transform: "translateX(0)" }, { transform: "translateX(-4px)" }, { transform: "translateX(4px)" }, { transform: "translateX(0)" }],
@@ -1673,27 +1669,35 @@
           });
         }
 
-        function createSound(kind) {
+        function createSound(kind, sourceOverride) {
           if (typeof Audio === "undefined") return null;
           const audio = new Audio();
-          audio.preload = "none";
+          audio.preload = "auto";
           audio.playsInline = true;
           audio.volume = volume / 100;
+          const asset = sourceOverride || SOUND_FILES[kind];
+          const explicitExtension = Array.isArray(asset) || /\.(mp3|wav|ogg)$/i.test(asset);
           const formats = [...AUDIO_FORMATS].sort((a, b) => {
             const mime = { mp3: "audio/mpeg", wav: "audio/wav", ogg: "audio/ogg" };
             return Number(audio.canPlayType(mime[b]) !== "") - Number(audio.canPlayType(mime[a]) !== "");
           });
+          const sources = Array.isArray(asset) ? asset : explicitExtension ? [asset] : formats.map(format => `${asset}.${format}`);
           const setSource = index => {
-            if (index >= formats.length) return;
-            audio.src = `./audio/${SOUND_FILES[kind]}.${formats[index]}`;
+            if (index >= sources.length) return;
+            audio.src = `./audio/${sources[index]}`;
             audio.addEventListener("error", () => setSource(index + 1), { once: true });
           };
           setSource(0);
+          audio.load();
           return audio;
         }
 
         function playSound(kind, { volumeScale = 1, pitch = 1 } = {}) {
           if (!soundEnabled || volume <= 0 || !SOUND_FILES[kind]) return;
+          if (Array.isArray(SOUND_FILES[kind])) {
+            playSoundSequence(kind, SOUND_FILES[kind]);
+            return;
+          }
           let pool = soundPools.get(kind);
           if (!pool) {
             pool = [];
@@ -1711,31 +1715,38 @@
           audio.preservesPitch = false;
           audio.webkitPreservesPitch = false;
           try {
-            const trimStart = SOUND_TRIM_STARTS[kind] || 0;
-            if (audio.readyState > 0) audio.currentTime = trimStart;
-            else if (trimStart > 0) {
-              audio.addEventListener("loadedmetadata", () => {
-                if (!audio.paused && audio.currentTime < trimStart) audio.currentTime = trimStart;
-              }, { once: true });
-            }
+            if (audio.readyState > 0) audio.currentTime = 0;
             const playback = audio.play();
             playback?.catch(() => {});
-            const trimEnd = SOUND_TRIM_ENDS[kind];
-            if (Number.isFinite(trimEnd)) {
-              const scheduleStop = () => {
-                const previousTimer = soundStopTimers.get(audio);
-                if (previousTimer) clearTimeout(previousTimer);
-                const remainingMs = Math.max(0, (trimEnd - audio.currentTime) / audio.playbackRate * 1000);
-                const timer = window.setTimeout(() => {
-                  if (!audio.paused && audio.currentTime < trimEnd + .04) audio.pause();
-                  soundStopTimers.delete(audio);
-                }, remainingMs);
-                soundStopTimers.set(audio, timer);
-              };
-              if (playback?.then) playback.then(scheduleStop).catch(() => {});
-              else scheduleStop();
-            }
           } catch {}
+        }
+
+        function playSoundSequence(kind, files) {
+          let index = 0;
+          const playNext = () => {
+            if (!soundEnabled || volume <= 0 || index >= files.length) return;
+            const audio = createSound(kind, files[index]);
+            if (!audio) return;
+            const pool = soundPools.get(kind) || [];
+            pool.push(audio);
+            soundPools.set(kind, pool);
+            audio.volume = volume / 100;
+            const advance = () => {
+              const poolIndex = pool.indexOf(audio);
+              if (poolIndex >= 0) pool.splice(poolIndex, 1);
+              audio.removeAttribute("src");
+              audio.load();
+              index += 1;
+              playNext();
+            };
+            audio.addEventListener("ended", advance, { once: true });
+            audio.addEventListener("error", advance, { once: true });
+            try {
+              const playback = audio.play();
+              playback?.catch(() => {});
+            } catch {}
+          };
+          playNext();
         }
 
         function playPlacementSounds(blockCount) {
@@ -1745,26 +1756,6 @@
               volumeScale: 1 / 2 ** index,
               pitch: 2 ** (index * 2 / 12)
             });
-          }
-        }
-
-        function unlockDeferredSound() {
-          if (deferredSoundUnlocked || !soundEnabled || !SOUND_FILES.over || typeof Audio === "undefined") return;
-          deferredSoundUnlocked = true;
-          const audio = createSound("over");
-          if (!audio) return;
-          const pool = soundPools.get("over") || [];
-          pool.push(audio);
-          soundPools.set("over", pool);
-          audio.muted = true;
-          try {
-            audio.play()?.then(() => {
-              audio.pause();
-              if (audio.readyState > 0) audio.currentTime = 0;
-              audio.muted = false;
-            }).catch(() => { audio.muted = false; });
-          } catch {
-            audio.muted = false;
           }
         }
 
@@ -1784,7 +1775,6 @@
           if (pieces.every(piece => piece.used)) {
             pieces = createPieceSet();
             newSet = true;
-            playSound("newSet");
           }
           renderPieces();
           if (!hasAnyMove()) {
@@ -1835,8 +1825,7 @@
             if (gameOverFrame) cancelAnimationFrame(gameOverFrame);
             gameOverFrame = 0;
             cells.forEach(cell => {
-              cell.classList.remove("filled", "game-over-filling", "game-over-clearing");
-              cell.classList.add("game-over-gray");
+              cell.classList.remove("filled", "game-over-filling", "game-over-clearing", "game-over-gray");
             });
             busy = false;
             gameOverElement.classList.add("visible");
@@ -1873,7 +1862,7 @@
                 for (let col = 0; col < SIZE; col += 1) {
                   const cell = cells[row * SIZE + col];
                   cell.classList.remove("filled", "game-over-filling", "game-over-clearing");
-                  cell.classList.add("game-over-gray");
+                  cell.setAttribute("aria-label", `Row ${row + 1}, column ${col + 1}, empty`);
                 }
               }
             }
@@ -1954,6 +1943,7 @@
             selectedPiece = -1;
             renderPieces();
             clearPreview();
+            playSound("drop");
             setStatus("Choose a piece to begin.");
             return;
           }
@@ -2141,15 +2131,7 @@
           savePreference("block-puzzle-sound", soundEnabled ? "on" : "off");
           updateSoundButton();
           saveGame();
-          if (soundEnabled) playSound("ui");
-          else soundPools.forEach(pool => pool.forEach(audio => audio.pause()));
-        });
-        document.addEventListener("pointerdown", unlockDeferredSound);
-        document.addEventListener("keydown", unlockDeferredSound);
-        document.addEventListener("click", event => {
-          if (!soundEnabled || !event.isTrusted || !event.target.closest?.("button")) return;
-          if (event.target.closest(".piece-button, .board-cell, #sound-toggle")) return;
-          playSound("ui");
+          if (!soundEnabled) soundPools.forEach(pool => pool.forEach(audio => audio.pause()));
         });
       })();
     </script>
