@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="theme-color" content="#090a09">
     <meta name="description" content="A little block puzzle. Place pieces, clear lines, and see how long you can keep going.">
-    <meta name="application-version" content="8">
+    <meta name="application-version" content="11">
     <title>Block Puzzle</title>
     <style>
       :root {
@@ -53,10 +53,18 @@
         color: var(--text);
         font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
         -webkit-font-smoothing: antialiased;
+        -webkit-user-select: none;
+        user-select: none;
+        -webkit-touch-callout: none;
       }
 
       button { font: inherit; }
       button:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+      .board, .board-cell, .board-wrap, .piece-button, .piece-shape, .piece-slot, .piece-block, .tray, .tray-hint, .toolbar-control, .sound-toggle, .icon-button, .reset-button {
+        -webkit-user-select: none;
+        user-select: none;
+        -webkit-touch-callout: none;
+      }
 
       .app-shell { width: min(calc(100% - 40px), 1056px); margin: 0 auto; }
 
@@ -129,6 +137,9 @@
         border-radius: 15px;
         background: var(--panel);
       }
+      .score-card-interactive { cursor: pointer; transition: background .18s ease, border-color .18s ease; }
+      .score-card-interactive:hover { border-color: #565a4c; background: var(--panel-raised); }
+      .score-card-interactive:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
       .score-card-label { display: block; margin-bottom: 4px; color: var(--muted); font-size: 10px; font-weight: 700; letter-spacing: .11em; text-transform: uppercase; }
       .score-value { font-variant-numeric: tabular-nums; white-space: nowrap; font-size: clamp(16px, 3.8vw, 23px); font-weight: 680; letter-spacing: -.04em; }
       .score-icon { color: var(--accent); font-size: 17px; opacity: .78; }
@@ -293,6 +304,27 @@
       .game-over h2 { margin: 0 0 7px; font-size: 25px; letter-spacing: -.04em; }
       .game-over p { max-width: 245px; margin: 0 0 17px; color: var(--muted); font-size: 12px; line-height: 1.5; }
       .game-over .reset-button { width: auto; padding: 0 17px; border-color: #85934f80; color: var(--accent); }
+      .score-info {
+        position: absolute;
+        z-index: 5;
+        inset: 9px;
+        display: none;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 24px;
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        background: var(--overlay);
+        text-align: center;
+        backdrop-filter: blur(7px);
+      }
+      .score-info.visible { display: flex; animation: dlgIn .35s ease both; }
+      .score-info.closing { animation: dlgOut .22s ease both; }
+      .score-info.static { animation: none; }
+      .score-info h2 { margin: 0 0 7px; font-size: 25px; }
+      .score-info p { max-width: 245px; margin: 0 0 17px; color: var(--muted); font-size: 12px; line-height: 1.5; white-space: pre-line; }
+      .score-info .reset-button { width: auto; padding: 0 17px; border-color: #85934f80; color: var(--accent); }
 
       .confirm-dialog {
         width: min(390px, calc(100% - 32px));
@@ -312,6 +344,7 @@
       .confirm-actions { display: flex; justify-content: flex-end; gap: 9px; }
       .confirm-actions .reset-button { width: auto; min-height: 40px; padding: 0 13px; }
       .confirm-actions .confirm-new-game { border-color: #85934f80; color: var(--accent); }
+      .confirm-actions .reset-best-danger { border-color: #a44c48; color: #ff8c8c; }
 
       @media (max-width: 930px) {
         .app-shell { width: min(calc(100% - 40px), 620px); }
@@ -324,9 +357,15 @@
         main { padding: 28px 0 30px; }
         .game-layout { grid-template-columns: minmax(0, 1fr); gap: 12px; }
         .side-panel { grid-template-columns: 1fr; }
+        .scorebar { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px; }
+        .score-card { min-height: 52px; padding: 6px 4px; gap: 3px; }
+        .score-card:last-child { gap: 1px; }
+        .score-card-label { font-size: 8px; }
+        .score-value { font-size: clamp(9px, 3.5vw, 14px); }
+        .score-icon { display: none; }
+        .combo-progress { gap: 2px; }
+        .combo-dot { width: 7px; height: 7px; }
         .side-card { padding: 15px 17px; }
-        .score-card { min-height: 64px; padding: 10px 11px; }
-        .score-card-label { font-size: 9px; }
         .how-list { grid-template-columns: repeat(3, 1fr); gap: 7px; }
         .how-step { grid-template-columns: 22px 1fr; gap: 6px; font-size: 10px; }
         .side-divider, .tip { display: none; }
@@ -340,16 +379,22 @@
         .tray { padding-inline: 6px; }
         .tray-heading { align-items: flex-start; flex-direction: column; gap: 5px; }
         .tray-hint { font-size: 10px; }
-        .score-card { padding: 8px 6px; }
-        .score-icon { display: none; }
+        .score-card { padding: 6px 2px; }
         .piece-button { min-width: 64px; min-height: 64px; padding: 6px; }
         .piece-shape { gap: 3px; }
         .piece-block { width: clamp(11px, 3vw, 16px); height: clamp(11px, 3vw, 16px); border-radius: 3px; }
         .how-list { grid-template-columns: 1fr; }
         .how-step { font-size: 11px; }
       }
+      @media (max-width: 320px) {
+        .score-card:last-child { flex-direction: column; align-items: stretch; justify-content: center; gap: 1px; }
+        .score-card:last-child > div { min-width: 0; width: 100%; text-align: center; }
+        .score-card:last-child .score-card-label { font-size: 7px; letter-spacing: .04em; }
+        .score-card:last-child .combo-progress { align-self: center; }
+      }
       @media (max-width: 280px) {
         .app-shell { width: calc(100% - 12px); }
+        .score-card-label { font-size: 7px; }
         .tray { padding-inline: 3px; }
         .piece-button { min-width: 0; min-height: 58px; padding: 3px; }
         .piece-shape { gap: 2px; }
@@ -370,7 +415,7 @@
       }
       /* v5: full screen layout, settings, popups, animations */
       [hidden] { display: none !important; }
-      :root { --board: clamp(240px, min(100vw - 28px, 100dvh - 345px), 680px); --overlay: #121312ee; --accent-glow: #c3d07873; --accent-soft: #c3d0781a; }
+      :root { --board: clamp(180px, min(100vw - 28px, 100dvh - 345px), 680px); --overlay: #121312ee; --accent-glow: #c3d07873; --accent-soft: #c3d0781a; }
       html, body { height: 100%; }
       body { display: flex; flex-direction: column; overflow: hidden; }
       .app-shell { flex: 1; display: flex; flex-direction: column; min-height: 0; height: 100dvh; padding: env(safe-area-inset-top) 0 env(safe-area-inset-bottom); }
@@ -409,11 +454,18 @@
       .board-cell.clearing { animation: clearPop .36s var(--d, 0ms) both ease-in; z-index: 1; }
       @keyframes clearPop { 0% { transform: scale(1); } 35% { transform: scale(1.14); background: var(--accent); box-shadow: 0 0 16px var(--accent-glow); } 100% { transform: scale(0); opacity: 0; } }
       .score-pop { position: absolute; z-index: 3; left: 50%; top: 42%; translate: -50% 0; pointer-events: none; color: var(--accent); font-size: clamp(22px, 6vw, 34px); font-weight: 720; letter-spacing: -.04em; text-align: center; text-shadow: 0 2px 14px #000a; animation: scorePop .95s ease-out forwards; }
+      .score-pop.new-best { font-size: clamp(28px, 7vw, 42px); animation-duration: 2s; }
+      .score-pop.static { animation: none; opacity: 1; transform: none; }
       .score-pop small { display: block; font-size: .5em; letter-spacing: .05em; }
       @keyframes scorePop { 0% { opacity: 0; transform: translateY(10px) scale(.7); } 20% { opacity: 1; transform: translateY(0) scale(1.1); } 100% { opacity: 0; transform: translateY(-46px) scale(1); } }
       .board-wrap { position: relative; }
-      #combo-badge { position: absolute; z-index: 3; top: 8px; right: 8px; padding: 4px 10px; border: 1px solid var(--accent-glow); border-radius: 999px; background: var(--overlay); color: var(--accent); font-size: 11px; font-weight: 650; letter-spacing: .04em; pointer-events: none; }
-      #combo-badge.danger { border-color: #ff6b6b; color: #ff8c8c; }
+      .combo-toast { position: absolute; z-index: 4; right: auto; bottom: 8px; left: 50%; padding: 8px 14px; border: 1px solid var(--accent-glow); border-radius: 999px; background: var(--overlay); color: var(--accent); font-size: 13px; font-weight: 750; white-space: nowrap; pointer-events: none; animation: comboToast 1.15s ease both; }
+      .combo-toast.broken { border-color: #ff6b6b; color: #ff8c8c; }
+      .combo-toast.static { animation: none; transform: translateX(-50%); }
+      @keyframes comboToast { 0% { opacity: 0; transform: translate(-50%, 10px) scale(.85); } 16% { opacity: 1; transform: translate(-50%, 0) scale(1.06); } 76% { opacity: 1; transform: translate(-50%, -2px) scale(1); } 100% { opacity: 0; transform: translate(-50%, -12px) scale(.98); } }
+      .combo-progress { display: flex; flex: 0 0 auto; align-items: center; gap: 4px; }
+      .combo-dot { display: block; width: 9px; height: 9px; border: 1px solid var(--accent-glow); border-radius: 50%; }
+      .combo-dot.filled { border-color: var(--accent); background: var(--accent); box-shadow: 0 0 7px var(--accent-glow); }
       .score-value.bump { animation: bump .25s ease; }
       @keyframes bump { 50% { transform: scale(1.18); color: var(--accent); } }
       .game-over.visible { animation: dlgIn .35s ease both; }
@@ -424,13 +476,14 @@
       @keyframes dlgOut { to { opacity: 0; transform: translateY(6px) scale(.97); } }
       @keyframes fadeIn { from { opacity: 0; } }
       @media (min-width: 900px) and (orientation: landscape) {
-        :root { --board: min(66vw, calc(100dvh - 230px), 680px); }
+        :root { --board: min(54vw, calc(100dvh - 300px), 560px); --board-half: min(27vw, calc(50dvh - 150px), 280px); }
         .app-shell { width: 100%; max-width: none; }
         .topbar {
           position: fixed;
           z-index: 20;
           top: 50%;
-          right: max(18px, env(safe-area-inset-right));
+          right: auto;
+          left: calc(50% + var(--board-half) + 63px);
           min-height: 0;
           transform: translateY(-50%);
           border: 0;
@@ -444,8 +497,21 @@
           width: 100%;
           padding-right: 68px;
         }
-        .game-main { width: var(--board); margin: 0; }
-        .scorebar { gap: 8px; margin-bottom: 8px; }
+        .game-main {
+          display: grid;
+          grid-template-columns: 140px minmax(0, var(--board));
+          grid-template-areas: "scores board" ". tray" ". status";
+          align-items: stretch;
+          column-gap: 18px;
+          row-gap: 8px;
+          width: calc(var(--board) + 158px);
+          margin: 0;
+        }
+        .scorebar { grid-area: scores; grid-template-columns: minmax(0, 1fr); align-content: center; gap: 8px; margin: 0; }
+        .score-card { min-height: 58px; padding: 8px 10px; }
+        .board-wrap { grid-area: board; }
+        .tray { grid-area: tray; margin: 0; }
+        .status-line { grid-area: status; margin: 0; }
         .score-card { min-height: 52px; padding: 7px 12px; }
         .board-wrap { padding: 8px; }
         .tray { min-height: 94px; margin-top: 8px; padding: 8px 14px; }
@@ -453,6 +519,41 @@
         .pieces, .piece-slot { min-height: 54px; }
         .piece-button { min-height: 50px; }
         .status-line { margin-top: 6px; }
+      }
+      @media (max-width: 899px) and (max-height: 560px) and (orientation: landscape) {
+        :root { --board: clamp(150px, min(48vw, calc(100dvh - 180px)), 250px); }
+        .topbar { min-height: 44px; }
+        .top-actions { gap: 6px; }
+        main { padding: 3px 0; }
+        .game-layout { display: flex; width: 100%; padding: 0 10px; align-items: center; justify-content: center; }
+        .game-main {
+          display: grid;
+          grid-template-columns: minmax(0, 1fr) var(--board);
+          grid-template-areas: "scores board" "tray board" "status board";
+          align-items: center;
+          column-gap: 12px;
+          row-gap: 5px;
+          width: min(100%, 760px);
+          margin: auto;
+        }
+        .scorebar { grid-area: scores; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px; margin: 0; }
+        .score-card { min-height: 42px; padding: 4px 5px; gap: 2px; }
+        .score-card-label { margin-bottom: 2px; font-size: 8px; }
+        .score-value { font-size: 14px; }
+        .score-icon { display: none; }
+        .combo-progress { gap: 2px; }
+        .combo-dot { width: 7px; height: 7px; }
+        .board-wrap { grid-area: board; width: var(--board); padding: 6px; }
+        .board { gap: 4px; }
+        .tray { grid-area: tray; min-height: 0; margin: 0; padding: 4px 8px; }
+        .tray-heading { margin: 0 0 2px; }
+        .tray-title { font-size: 9px; }
+        .tray-hint { display: none; }
+        .pieces, .piece-slot { min-height: 40px; }
+        .piece-button { min-width: 0; min-height: 36px; padding: 3px; }
+        .piece-shape { gap: 2px; }
+        .piece-block { width: clamp(9px, 2.4vw, 14px); height: clamp(9px, 2.4vw, 14px); }
+        .status-line { grid-area: status; min-height: 16px; margin: 0; }
       }
     </style>
   </head>
@@ -477,17 +578,23 @@
         <section class="game-layout" aria-label="Block puzzle game">
           <div class="game-main">
             <div class="scorebar" aria-label="Game scores">
-              <div class="score-card">
+              <div class="score-card score-card-interactive" id="score-card" role="button" tabindex="0" aria-haspopup="dialog" aria-controls="score-info" aria-label="Show current score details">
                 <div><span class="score-card-label">Your score</span><strong class="score-value" id="score">0</strong></div>
                 <span class="score-icon" aria-hidden="true">✳</span>
               </div>
-              <div class="score-card">
+              <div class="score-card score-card-interactive" id="best-card" role="button" tabindex="0" aria-haspopup="dialog" aria-controls="score-info" aria-label="Show best score details">
                 <div><span class="score-card-label">Best</span><strong class="score-value" id="best">0</strong></div>
                 <span class="score-icon" aria-hidden="true">↗</span>
               </div>
               <div class="score-card">
                 <div><span class="score-card-label">Lines</span><strong class="score-value" id="lines">0</strong></div>
                 <span class="score-icon" aria-hidden="true">≡</span>
+              </div>
+              <div class="score-card">
+                <div><span class="score-card-label">Current combo</span><strong class="score-value" id="current-combo">0</strong></div>
+                <span class="combo-progress" id="combo-progress" role="img" aria-label="0 of 2 consecutive line clears">
+                  <span class="combo-dot"></span><span class="combo-dot"></span>
+                </span>
               </div>
             </div>
 
@@ -501,6 +608,11 @@
                   <svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M16.5 9.3A6.7 6.7 0 1 1 14.4 5M16.5 3.5v5h-5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
                   Play again
                 </button>
+              </div>
+              <div class="score-info" id="score-info" role="dialog" aria-modal="true" aria-labelledby="score-info-title" aria-describedby="score-info-copy">
+                <h2 id="score-info-title">Current score</h2>
+                <p id="score-info-copy"></p>
+                <button class="reset-button" id="continue-score-info" type="button">Continue</button>
               </div>
             </div>
 
@@ -545,6 +657,7 @@
             <label class="setting-row"><span>Piece height above finger</span><input type="range" id="lift" min="0" max="140"></label>
             <label class="setting-row"><span>Snap assist</span><input type="checkbox" id="snap"></label>
             <label class="setting-row"><span>Animations</span><input type="checkbox" id="anim"></label>
+            <div class="setting-row"><span>Best score</span><button class="toolbar-control" id="reset-best-score" type="button">Reset best</button></div>
           </div>
           <div class="setting-links" aria-label="Project information">
             <a class="link-button" href="https://github.com/luminivis/blockpuzzle" target="_blank" rel="noopener noreferrer">Code ↗</a>
@@ -580,6 +693,17 @@
           </div>
         </form>
       </dialog>
+      <dialog class="confirm-dialog" id="reset-best-dialog" aria-labelledby="reset-best-title" aria-describedby="reset-best-copy">
+        <div class="confirm-content">
+          <p class="confirm-eyebrow">Best score</p>
+          <h2 id="reset-best-title">Reset best score?</h2>
+          <p id="reset-best-copy">This will remove your saved all-time best score.</p>
+          <div class="confirm-actions">
+            <button class="reset-button" id="cancel-reset-best" type="button">Keep best</button>
+            <button class="reset-button confirm-new-game" id="confirm-reset-best" type="button">Continue</button>
+          </div>
+        </div>
+      </dialog>
     </div>
 
     <script>
@@ -591,7 +715,7 @@
           if (hadController) {
             navigator.serviceWorker.addEventListener("controllerchange", () => window.location.reload());
           }
-          navigator.serviceWorker.register("./service-worker.js?v=8", { updateViaCache: "none" })
+          navigator.serviceWorker.register("./service-worker.js?v=11", { updateViaCache: "none" })
             .then(registration => registration.update())
             .catch(error => {
               console.error("Offline support could not be enabled.", error);
@@ -629,15 +753,29 @@
         ];
 
         const boardElement = document.querySelector("#board");
+        const boardWrapElement = document.querySelector(".board-wrap");
+        const gameMainElement = document.querySelector(".game-main");
+        const topbarElement = document.querySelector(".topbar");
+        const desktopLandscape = window.matchMedia("(min-width: 900px) and (orientation: landscape)");
         const piecesElement = document.querySelector("#pieces");
         const scoreElement = document.querySelector("#score");
         const bestElement = document.querySelector("#best");
         const linesElement = document.querySelector("#lines");
+        const currentComboElement = document.querySelector("#current-combo");
+        const comboProgressElement = document.querySelector("#combo-progress");
         const statusElement = document.querySelector("#status");
         const gameOverElement = document.querySelector("#game-over");
         const gameOverCopy = document.querySelector("#game-over-copy");
+        const scoreInfoElement = document.querySelector("#score-info");
+        const scoreInfoTitle = document.querySelector("#score-info-title");
+        const scoreInfoCopy = document.querySelector("#score-info-copy");
+        const continueScoreInfoButton = document.querySelector("#continue-score-info");
         const playAgainButton = document.querySelector("#play-again");
         const newGameDialog = document.querySelector("#new-game-dialog");
+        const resetBestDialog = document.querySelector("#reset-best-dialog");
+        const resetBestTitle = document.querySelector("#reset-best-title");
+        const resetBestCopy = document.querySelector("#reset-best-copy");
+        const confirmResetBestButton = document.querySelector("#confirm-reset-best");
         const soundToggleButton = document.querySelector("#sound-toggle");
         let board;
         let pieces;
@@ -654,22 +792,37 @@
         let clearTimer;
         let pointerDrag;
         let bestAtStart = 0;
+        let newBestAnnounced = false;
         let draggedButton;
+        let scoreInfoTrigger;
+        let resetBestStep = 1;
         let soundEnabled = readPreference("block-puzzle-sound", "on", ["on", "off"]) === "on";
         let theme = readTheme();
         let volume = readNumber("block-puzzle-volume", 70, 0, 100);
-        let liftPx = readNumber("block-puzzle-lift", 56, 0, 140);
+        let liftPx = readNumber("block-puzzle-lift", 0, 0, 140);
         let snapAssist = readPreference("block-puzzle-snap", "on", ["on", "off"]) === "on";
         let animationsEnabled = readPreference("block-puzzle-animations", window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ? "off" : "on", ["on", "off"]) === "on";
         let newSet = true;
         let audioContext;
         let audioBus;
 
-        bestElement.textContent = best.toLocaleString();
+        bestElement.textContent = formatScore(best);
         applyTheme();
         updateSoundButton();
         makeBoard();
         startGame();
+        alignToolbarWithBoard();
+        window.addEventListener("resize", alignToolbarWithBoard);
+        if ("ResizeObserver" in window) new ResizeObserver(alignToolbarWithBoard).observe(gameMainElement);
+
+        function alignToolbarWithBoard() {
+          if (!desktopLandscape.matches) {
+            topbarElement.style.removeProperty("top");
+            return;
+          }
+          const boardBounds = boardWrapElement.getBoundingClientRect();
+          topbarElement.style.top = `${boardBounds.top + boardBounds.height / 2}px`;
+        }
 
         function readTheme() {
           const result = { ...DEFAULT_THEME };
@@ -809,6 +962,7 @@
           draggedButton = undefined;
           removeDragGhost();
           bestAtStart = best;
+          newBestAnnounced = false;
           board = Array.from({ length: SIZE }, () => Array(SIZE).fill(false));
           pieces = createPieceSet();
           newSet = true;
@@ -816,7 +970,8 @@
           linesCleared = 0;
           combo = 0;
           missed = 0;
-          updateComboBadge();
+          updateComboStatus();
+          document.querySelector(".combo-toast")?.remove();
           selectedPiece = -1;
           busy = false;
           gameEnded = false;
@@ -925,7 +1080,8 @@
               selectPiece(index, event.detail === 0);
             });
             button.addEventListener("pointerdown", event => {
-              if (event.button !== 0 || busy || gameEnded || piece.used || pointerDrag) return;
+              if (event.button !== 0 || busy || gameEnded || scoreInfoElement.classList.contains("visible") || piece.used || pointerDrag) return;
+              event.preventDefault();
               pointerDrag = {
                 pointerId: event.pointerId,
                 startX: event.clientX,
@@ -1049,7 +1205,7 @@
 
         // Like Block Blast: the piece pops up to board size and floats above a finger or pen.
         function moveDragGhost(ghost, event) {
-          const lift = event.pointerType === "mouse" ? 0 : ghost.height / 2 + liftPx;
+          const lift = event.pointerType === "mouse" ? 0 : liftPx;
           ghost.left = event.clientX - ghost.width / 2;
           ghost.top = event.clientY - lift - ghost.height / 2;
           const finalTransform = `translate(${ghost.left}px, ${ghost.top}px)`;
@@ -1106,33 +1262,89 @@
           }
         }
 
-        function updateComboBadge() {
-          let badge = document.querySelector("#combo-badge");
-          if (!badge) {
-            badge = document.createElement("div");
-            badge.id = "combo-badge";
-            badge.setAttribute("aria-live", "polite");
-            document.querySelector(".board-wrap").append(badge);
-          }
-          badge.hidden = combo < 2;
-          const left = Math.max(0, COMBO_GRACE - missed);
-          badge.textContent = `Combo x${combo} · ${"●".repeat(left)}${"○".repeat(COMBO_GRACE - left)}`;
-          badge.title = `${left} of ${COMBO_GRACE} misses left`;
-          badge.classList.toggle("danger", left === 0);
-          const changed = badge.dataset.combo !== String(combo);
-          badge.dataset.combo = String(combo);
-          if (combo >= 2 && changed && animationsEnabled) badge.animate([{ transform: "scale(1.35)" }, { transform: "scale(1)" }], { duration: 260, easing: "cubic-bezier(.2,.8,.2,1)" });
+        function showComboMessage(message, broken = false) {
+          document.querySelector(".combo-toast")?.remove();
+          const toast = document.createElement("div");
+          toast.className = `combo-toast${broken ? " broken" : ""}${animationsEnabled ? "" : " static"}`;
+          toast.setAttribute("aria-live", "polite");
+          toast.textContent = message;
+          document.querySelector(".board-wrap").append(toast);
+          window.setTimeout(() => toast.remove(), 1150);
         }
 
-        function showScorePop(points, lines, streak = 0) {
-          if (!animationsEnabled) return;
+        function showScoreInfo(kind, trigger) {
+          scoreInfoTrigger = trigger;
+          if (kind === "best") {
+            scoreInfoTitle.textContent = "Best score";
+            scoreInfoCopy.textContent = `Highest score across all games.\nBest: ${best.toLocaleString()} points.`;
+          } else {
+            scoreInfoTitle.textContent = "Current score";
+            scoreInfoCopy.textContent = `Points earned in this game.\nCurrent total: ${score.toLocaleString()} points.`;
+          }
+          scoreInfoElement.classList.toggle("static", !animationsEnabled);
+          scoreInfoElement.classList.add("visible");
+          continueScoreInfoButton.focus();
+        }
+
+        function closeScoreInfo() {
+          if (!scoreInfoElement.classList.contains("visible") || scoreInfoElement.classList.contains("closing")) return;
+          scoreInfoElement.classList.add("closing");
+          const trigger = scoreInfoTrigger;
+          scoreInfoTrigger = undefined;
+          if (!animationsEnabled) {
+            scoreInfoElement.classList.remove("visible", "closing", "static");
+            trigger?.focus();
+            return;
+          }
+          scoreInfoElement.addEventListener("animationend", () => {
+            scoreInfoElement.classList.remove("visible", "closing", "static");
+            trigger?.focus();
+          }, { once: true });
+        }
+
+        function toggleScoreInfo(kind, trigger) {
+          if (scoreInfoElement.classList.contains("visible")) {
+            closeScoreInfo();
+            return;
+          }
+          showScoreInfo(kind, trigger);
+        }
+
+        scoreInfoElement.addEventListener("keydown", event => {
+          if (event.key !== "Escape") return;
+          event.preventDefault();
+          closeScoreInfo();
+        });
+        scoreInfoElement.addEventListener("click", event => {
+          if (event.target === scoreInfoElement) closeScoreInfo();
+        });
+        document.addEventListener("click", event => {
+          if (!scoreInfoElement.classList.contains("visible") || scoreInfoElement.contains(event.target) || event.target.closest?.(".score-card-interactive")) return;
+          closeScoreInfo();
+        });
+
+        function updateComboStatus() {
+          const progress = Math.min(combo, 2);
+          currentComboElement.textContent = combo >= 2 ? `x${combo}` : "0";
+          comboProgressElement.hidden = combo >= 2;
+          comboProgressElement.setAttribute("aria-label", `${progress} of 2 consecutive line clears`);
+          Array.from(comboProgressElement.children).forEach((dot, index) => {
+            dot.classList.toggle("filled", index < progress);
+          });
+        }
+
+        function showScorePop(points, lines, newBest = false) {
           const pop = document.createElement("div");
           const words = ["", "", "Double!", "Triple!", "Wow!"];
-          pop.className = "score-pop";
-          const label = [lines > 1 ? words[Math.min(lines, 4)] : "", streak > 1 ? `Combo x${streak}` : ""].filter(Boolean).join(" · ");
-          pop.innerHTML = `+${points}${label ? `<small>${label}</small>` : ""}`;
+          pop.className = `score-pop${newBest ? " new-best" : ""}${animationsEnabled ? "" : " static"}`;
+          if (newBest) {
+            pop.textContent = "New Best!";
+          } else {
+            const label = lines > 1 ? words[Math.min(lines, 4)] : "";
+            pop.innerHTML = `+${points}${label ? `<small>${label}</small>` : ""}`;
+          }
           document.querySelector(".board-wrap").append(pop);
-          window.setTimeout(() => pop.remove(), 950);
+          window.setTimeout(() => pop.remove(), newBest ? 2000 : 950);
         }
 
         function removeDragGhost() {
@@ -1140,7 +1352,7 @@
         }
 
         function selectPiece(index, returnFocusToBoard = false) {
-          if (busy || gameEnded || pieces[index].used) return;
+          if (busy || gameEnded || scoreInfoElement.classList.contains("visible") || pieces[index].used) return;
           selectedPiece = selectedPiece === index ? -1 : index;
           if (selectedPiece >= 0) playSound("pick");
           renderPieces();
@@ -1158,7 +1370,7 @@
         }
 
         function placeSelected(row, col) {
-          if (busy || gameEnded) return;
+          if (busy || gameEnded || scoreInfoElement.classList.contains("visible")) return;
           if (selectedPiece < 0) {
             setStatus("Choose a piece below first.", "error");
             return;
@@ -1180,7 +1392,6 @@
           piece.used = true;
           selectedPiece = -1;
           const cleared = getCompletedLines();
-          playSound(cleared.length ? "clear" : "place", Math.min(cleared.length + Math.max(0, combo - 1), 4));
           linesCleared += cleared.length;
           linesElement.textContent = linesCleared.toLocaleString();
           const clearedCells = new Set();
@@ -1192,18 +1403,27 @@
           });
 
           // Combo: clearing lines on back-to-back moves builds a streak. You can miss two moves and keep it.
+          let comboBroken = false;
           if (cleared.length) {
             combo += 1;
             missed = 0;
+            if (combo >= 2) showComboMessage(`Combo x${combo}`);
           } else if (combo > 0) {
             missed += 1;
-            if (missed > COMBO_GRACE) { combo = 0; missed = 0; }
+            if (missed > COMBO_GRACE) {
+              comboBroken = combo >= 2;
+              combo = 0;
+              missed = 0;
+              if (comboBroken) showComboMessage("Combo broken!", true);
+            }
           }
+          updateComboStatus();
+          if (comboBroken) playSound("comboBroken");
+          else playSound(cleared.length ? (combo > 1 ? "combo" : "clear") : "place", cleared.length ? Math.max(combo, cleared.length) : piece.shape.length);
           const comboBonus = cleared.length ? 25 * combo * (combo - 1) : 0; // 50, 150, 300, 500 ...
           const earned = piece.shape.length * 10 + cleared.length * 100 + Math.max(0, cleared.length - 1) * 50 + comboBonus;
-          updateScore(earned);
-          showScorePop(earned, cleared.length, cleared.length ? combo : 0);
-          updateComboBadge();
+          const newBest = updateScore(earned);
+          showScorePop(earned, cleared.length, newBest);
           if (clearedCells.size) {
             busy = true;
             clearedCells.forEach(key => {
@@ -1229,17 +1449,19 @@
 
         function animatePlacedBlocks(shape, row, col) {
           if (!animationsEnabled) return;
-          shape.forEach(([dr, dc], index) => {
+          const waveShape = [...shape].sort((a, b) => a[0] - b[0] || a[1] - b[1]);
+          waveShape.forEach(([dr, dc], index) => {
             const cell = boardElement.children[(row + dr) * SIZE + col + dc];
             cell.classList.add("filled");
             cell.setAttribute("aria-label", `Row ${row + dr + 1}, column ${col + dc + 1}, filled`);
             cell.animate(
               [
-                { transform: "scale(.55)", opacity: .3 },
-                { transform: "scale(1.1)", opacity: 1, offset: .6 },
-                { transform: "scale(1)", opacity: 1 }
+                { transform: "translateY(0) scale(.9)", opacity: .32 },
+                { transform: "translateY(-12px) scale(.82)", opacity: .5, offset: .18 },
+                { transform: "translateY(3px) scale(1.07)", opacity: 1, offset: .72 },
+                { transform: "translateY(0) scale(1)", opacity: 1 }
               ],
-              { duration: 240, delay: index * 14, easing: "cubic-bezier(.2,.8,.2,1)" }
+              { duration: 240, delay: index * 65, easing: "cubic-bezier(.2,.8,.2,1)", fill: "backwards" }
             );
           });
         }
@@ -1273,33 +1495,71 @@
           }
           const play = () => {
             const now = audioContext.currentTime;
-            audioBus.gain.setTargetAtTime(volume / 100 * .32, now, .01);
-            const tone = (from, at, length, type = "sine", level = 1, to = from) => {
+            audioBus.gain.setTargetAtTime(volume / 100 * .24, now, .04);
+            const tone = (from, at, length, type = "sine", level = 1, to = from, detune = 0, filterFrequency = 1800, attack = .012) => {
               const oscillator = audioContext.createOscillator();
               const gain = audioContext.createGain();
+              const filter = audioContext.createBiquadFilter();
               oscillator.type = type;
+              oscillator.detune.setValueAtTime(detune, now + at);
               oscillator.frequency.setValueAtTime(from, now + at);
-              oscillator.frequency.exponentialRampToValueAtTime(to, now + at + length);
+              oscillator.frequency.exponentialRampToValueAtTime(to, now + at + length * .9);
+              filter.type = "lowpass";
+              filter.frequency.setValueAtTime(filterFrequency, now + at);
+              filter.Q.setValueAtTime(.6, now + at);
               gain.gain.setValueAtTime(.0001, now + at);
-              gain.gain.exponentialRampToValueAtTime(level, now + at + .01);
-              gain.gain.exponentialRampToValueAtTime(.0001, now + at + length);
-              oscillator.connect(gain);
+              gain.gain.exponentialRampToValueAtTime(level * .7, now + at + Math.min(attack, length * .5));
+              gain.gain.exponentialRampToValueAtTime(.0001, now + at + length + .08);
+              oscillator.connect(filter);
+              filter.connect(gain);
               gain.connect(audioBus);
               oscillator.start(now + at);
-              oscillator.stop(now + at + length + .02);
+              oscillator.stop(now + at + length + .12);
             };
-            if (kind === "pick") { tone(520, 0, .08, "sine", .45, 690); tone(1040, .015, .07, "sine", .12, 1380); }
-            if (kind === "place") { tone(185, 0, .16, "triangle", .75, 78); tone(620, .012, .1, "sine", .2, 320); }
-            if (kind === "bad") { tone(165, 0, .15, "triangle", .35, 105); tone(110, .02, .12, "sine", .25, 82); }
-            if (kind === "clear") {
-              const scale = [523.25, 587.33, 659.25, 783.99, 880, 1046.5, 1174.66, 1318.51];
-              tone(175, 0, .18, "triangle", .65, 75);
-              for (let i = 0; i < Math.min(amount + 2, scale.length); i += 1) {
-                tone(scale[i + Math.min(amount - 1, 2)], .04 + i * .055, .24, "sine", .6);
-                if (i === 0 || i === 2) tone(scale[i + Math.min(amount - 1, 2)] * 1.5, .05 + i * .055, .2, "triangle", .12);
+            if (kind === "pick") {
+              tone(392, 0, .16, "sine", .24, 468, 4, 1600);
+              tone(523.25, .03, .14, "triangle", .16, 610, -3, 1500);
+            }
+            if (kind === "place") {
+              const blockCount = Math.min(5, Math.max(1, Math.floor(amount)));
+              for (let index = 0; index < blockCount; index += 1) {
+                const at = index * .035;
+                tone(142 - index * 4, at, .11, "sine", .22, 94 - index * 3, 0, 520, .006);
+                tone(620 - index * 26, at, .075, "triangle", .19, 390 - index * 18, index % 2 ? -3 : 3, 1500, .004);
               }
             }
-            if (kind === "over") [392, 329.63, 261.63].forEach((frequency, i) => tone(frequency, i * .16, .32, "triangle", .65));
+            if (kind === "bad") {
+              tone(165, 0, .14, "triangle", .12, 120, 2, 1050);
+              tone(110, .03, .13, "sine", .08, 92, -4, 900);
+            }
+            if (kind === "clear") {
+              const notes = [523.25, 659.25, 783.99, 1046.5];
+              const lift = Math.min(Math.max(0, amount - 1), 4) * 24;
+              tone(196, 0, .16, "triangle", .16, 150, 2, 1200, .018);
+              notes.slice(0, Math.min(3 + Math.floor(amount / 2), notes.length)).forEach((note, index) => {
+                const frequency = note + lift;
+                tone(frequency, .035 + index * .075, .2, "sine", .19 - index * .02, frequency * 1.02, index % 2 === 0 ? 4 : -5, 2100, .014);
+              });
+            }
+            if (kind === "combo") {
+              const level = Math.min(8, Math.max(2, Math.floor(amount)));
+              const root = 392 + level * 22;
+              const intervals = [0, 4, 7, 12];
+              tone(164, 0, .14, "sine", .14, 120, 0, 650, .01);
+              intervals.forEach((semitones, index) => {
+                const frequency = root * 2 ** (semitones / 12);
+                tone(frequency, .025 + index * .085, .24, index === 3 ? "triangle" : "sine", .18 + index * .015, frequency * 1.015, index % 2 ? -3 : 3, 2400, .012);
+              });
+            }
+            if (kind === "comboBroken") {
+              tone(392, 0, .2, "triangle", .11, 311.13, -2, 1050, .025);
+              tone(293.66, .14, .24, "sine", .09, 196, -3, 850, .03);
+            }
+            if (kind === "over") {
+              [392, 349.23, 293.66, 261.63, 220, 196].forEach((frequency, index) => {
+                tone(frequency, index * .27, .38, "triangle", .13, frequency * .84, index % 2 ? -2 : 2, 1050, .045);
+              });
+            }
           };
           if (audioContext.state === "suspended") {
             audioContext.resume().then(play).catch(error => console.warn("Game sound could not be started.", error));
@@ -1332,7 +1592,7 @@
             Array.from(boardElement.children).forEach(cell => { cell.disabled = true; });
             renderPieces();
             const lineWord = linesCleared === 1 ? "line" : "lines";
-            const newRecord = score > 0 && score > bestAtStart;
+            const newRecord = newBestAnnounced;
             gameOverCopy.textContent = `${newRecord ? "New best! " : ""}You scored ${score.toLocaleString()} points and cleared ${linesCleared.toLocaleString()} ${lineWord}. Fancy another round?`;
             gameOverElement.classList.add("visible");
             playSound("over");
@@ -1359,15 +1619,27 @@
           return false;
         }
 
+        function formatScore(value) {
+          const units = [[1000000000, "B"], [1000000, "M"], [1000, "K"]];
+          const unit = units.find(([threshold]) => value >= threshold);
+          if (!unit) return value.toLocaleString();
+          const amount = Math.floor(value / unit[0] * 10) / 10;
+          const formatted = Number.isInteger(amount) ? amount.toFixed(0) : amount.toFixed(1);
+          return `${formatted}${unit[1]}`;
+        }
+
         function updateScore(points) {
           score += points;
-          scoreElement.textContent = score.toLocaleString();
+          scoreElement.textContent = formatScore(score);
           if (animationsEnabled) scoreElement.animate([{ transform: "scale(1)" }, { transform: "scale(1.18)", color: theme.accent }, { transform: "scale(1)" }], { duration: 250 });
+          const newBest = score > bestAtStart && !newBestAnnounced;
           if (score > best) {
             best = score;
-            bestElement.textContent = best.toLocaleString();
+            bestElement.textContent = formatScore(best);
             saveBest();
           }
+          if (newBest) newBestAnnounced = true;
+          return newBest;
         }
 
         function preview(row, col) {
@@ -1400,7 +1672,7 @@
         document.addEventListener("keydown", event => {
           if (event.ctrlKey || event.metaKey || event.altKey || document.querySelector("dialog[open]")) return;
           if (event.target.matches?.("select, input, textarea")) return;
-          if (busy || gameEnded || pointerDrag?.dragging) return;
+          if (busy || gameEnded || scoreInfoElement.classList.contains("visible") || pointerDrag?.dragging) return;
           if (event.key === "Escape" && selectedPiece >= 0) {
             selectedPiece = -1;
             renderPieces();
@@ -1491,13 +1763,13 @@
           theme = { ...DEFAULT_THEME };
           soundEnabled = true;
           volume = 70;
-          liftPx = 56;
+          liftPx = 0;
           snapAssist = true;
           animationsEnabled = true;
           try { localStorage.removeItem(THEME_KEY); localStorage.removeItem("block-puzzle-block-color"); } catch (error) { console.warn("Could not clear saved colors.", error); }
           savePreference("block-puzzle-volume", "70");
           savePreference("block-puzzle-sound", "on");
-          savePreference("block-puzzle-lift", "56");
+          savePreference("block-puzzle-lift", "0");
           savePreference("block-puzzle-snap", "on");
           savePreference("block-puzzle-animations", "on");
           applyTheme();
@@ -1506,7 +1778,47 @@
         });
         document.querySelector("#settings-button").addEventListener("click", () => { syncSettings(); openDialog(settingsDialog); });
         document.querySelector("#close-settings").addEventListener("click", () => closeDialog(settingsDialog));
+        document.querySelector("#reset-best-score").addEventListener("click", () => {
+          resetBestStep = 1;
+          resetBestTitle.textContent = "Reset best score?";
+          resetBestCopy.textContent = "This will remove your saved all-time best score.";
+          confirmResetBestButton.textContent = "Continue";
+          confirmResetBestButton.classList.remove("reset-best-danger");
+          openDialog(resetBestDialog);
+        });
+        document.querySelector("#cancel-reset-best").addEventListener("click", () => closeDialog(resetBestDialog));
+        confirmResetBestButton.addEventListener("click", () => {
+          if (resetBestStep === 1) {
+            resetBestStep = 2;
+            resetBestTitle.textContent = "Are you sure?";
+            resetBestCopy.textContent = "Your best score will be permanently deleted. This cannot be undone.";
+            confirmResetBestButton.textContent = "Reset best";
+            confirmResetBestButton.classList.add("reset-best-danger");
+            return;
+          }
+          best = 0;
+          bestAtStart = 0;
+          newBestAnnounced = false;
+          bestElement.textContent = formatScore(best);
+          try {
+            localStorage.removeItem("block-and-bloom-best");
+          } catch (error) {
+            console.warn("Could not clear the saved best score.", error);
+          }
+          closeDialog(resetBestDialog);
+        });
         document.querySelector("#info-button").addEventListener("click", () => showInfo("help"));
+        document.querySelector("#score-card").addEventListener("click", event => toggleScoreInfo("score", event.currentTarget));
+        document.querySelector("#best-card").addEventListener("click", event => toggleScoreInfo("best", event.currentTarget));
+        [
+          [document.querySelector("#score-card"), "score"],
+          [document.querySelector("#best-card"), "best"]
+        ].forEach(([card, kind]) => card.addEventListener("keydown", event => {
+          if (event.key !== "Enter" && event.key !== " ") return;
+          event.preventDefault();
+          toggleScoreInfo(kind, card);
+        }));
+        continueScoreInfoButton.addEventListener("click", closeScoreInfo);
         document.querySelector("#close-info").addEventListener("click", () => closeDialog(infoDialog));
         document.querySelectorAll("[data-info]").forEach(button => button.addEventListener("click", () => showInfo(button.dataset.info)));
         document.querySelectorAll("dialog").forEach(dialog => {
