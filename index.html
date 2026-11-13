@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="theme-color" content="#090a09">
     <meta name="description" content="A little block puzzle. Place pieces, clear lines, and see how long you can keep going.">
-    <meta name="application-version" content="7">
+    <meta name="application-version" content="8">
     <title>Block Puzzle</title>
     <style>
       :root {
@@ -69,18 +69,6 @@
       }
 
       .top-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 8px; padding: 8px 0; }
-      .repo-link {
-        display: inline-flex;
-        align-items: center;
-        gap: 6px;
-        color: var(--muted);
-        font-size: 11px;
-        font-weight: 650;
-        text-decoration: none;
-        transition: color .18s ease;
-      }
-      .repo-link:hover { color: var(--text); }
-      .repo-link span { color: var(--accent); }
       .toolbar-control {
         min-height: 36px;
         padding: 0 10px;
@@ -286,12 +274,6 @@
       .status-line[aria-live] { transition: color .18s ease; }
       .status-line.success { color: var(--accent); }
       .status-line.error { color: var(--danger); }
-      footer { padding: 0 0 22px; color: #85877e; font-size: 10px; text-align: center; }
-      footer a { color: var(--accent); text-decoration: none; }
-      footer a:hover { text-decoration: underline; }
-      .footer-links { display: inline-flex; flex-wrap: wrap; justify-content: center; gap: 12px; margin-left: 8px; }
-      .app-version { display: block; margin-top: 4px; color: #707368; font-size: 10px; }
-
       .game-over {
         position: absolute;
         z-index: 2;
@@ -393,12 +375,10 @@
       body { display: flex; flex-direction: column; overflow: hidden; }
       .app-shell { flex: 1; display: flex; flex-direction: column; min-height: 0; height: 100dvh; padding: env(safe-area-inset-top) 0 env(safe-area-inset-bottom); }
       .topbar { justify-content: space-between; min-height: 54px; border-bottom-color: var(--line); }
-      .brand { font-size: 18px; font-weight: 630; letter-spacing: -.04em; }
       main { flex: 1; min-height: 0; display: flex; padding: 6px 0; }
       .intro, .side-panel { display: none; }
       .game-layout { flex: 1; display: flex; justify-content: center; align-items: center; min-height: 0; }
       .game-main { width: var(--board); margin: auto; }
-      footer { padding: 4px 0 10px; }
       .link-button { padding: 0; border: 0; background: none; color: var(--accent); font: inherit; cursor: pointer; }
       .link-button:hover, .link-button.active { text-decoration: underline; }
       @media (max-height: 560px) { body { overflow: auto; } }
@@ -409,6 +389,7 @@
       .board-cell.preview { background: var(--accent-glow); }
       .board-cell.will-clear { box-shadow: inset 0 0 0 2px var(--accent), 0 0 12px var(--accent-glow); }
       .setting-list { display: grid; gap: 4px; margin: 14px 0 18px; }
+      .setting-links { display: flex; flex-wrap: wrap; gap: 16px; margin: 0 0 20px; font-size: 12px; }
       .setting-row { display: flex; align-items: center; justify-content: space-between; gap: 14px; min-height: 38px; color: var(--muted); font-size: 12px; }
       .setting-row input[type=range] { width: 140px; accent-color: var(--accent); }
       .setting-row input[type=checkbox] { width: 18px; height: 18px; accent-color: var(--accent); }
@@ -442,12 +423,42 @@
       @keyframes dlgIn { from { opacity: 0; transform: translateY(10px) scale(.96); } to { opacity: 1; transform: none; } }
       @keyframes dlgOut { to { opacity: 0; transform: translateY(6px) scale(.97); } }
       @keyframes fadeIn { from { opacity: 0; } }
+      @media (min-width: 900px) and (orientation: landscape) {
+        :root { --board: min(66vw, calc(100dvh - 230px), 680px); }
+        .app-shell { width: 100%; max-width: none; }
+        .topbar {
+          position: fixed;
+          z-index: 20;
+          top: 50%;
+          right: max(18px, env(safe-area-inset-right));
+          min-height: 0;
+          transform: translateY(-50%);
+          border: 0;
+        }
+        .top-actions { flex-direction: column; gap: 10px; padding: 0; }
+        main { padding: 8px 0; }
+        .game-layout {
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          width: 100%;
+          padding-right: 68px;
+        }
+        .game-main { width: var(--board); margin: 0; }
+        .scorebar { gap: 8px; margin-bottom: 8px; }
+        .score-card { min-height: 52px; padding: 7px 12px; }
+        .board-wrap { padding: 8px; }
+        .tray { min-height: 94px; margin-top: 8px; padding: 8px 14px; }
+        .tray-heading { margin-bottom: 4px; }
+        .pieces, .piece-slot { min-height: 54px; }
+        .piece-button { min-height: 50px; }
+        .status-line { margin-top: 6px; }
+      }
     </style>
   </head>
   <body>
     <div class="app-shell">
       <header class="topbar">
-        <span class="brand">Block Puzzle</span>
         <div class="top-actions">
           <button class="icon-button" id="new-game-top" type="button" aria-label="New game" title="New game">↻</button>
           <button class="icon-button" id="fullscreen-button" type="button" aria-label="Full screen" title="Full screen">⛶</button>
@@ -529,11 +540,16 @@
           <h2 id="settings-title">Settings</h2>
           <div class="setting-list">
             <div id="color-rows"></div>
-            <label class="setting-row"><span>Sound</span><button class="toolbar-control sound-toggle" id="sound-toggle" type="button" aria-pressed="false">Sound off</button></label>
+            <label class="setting-row"><span>Sound</span><button class="toolbar-control sound-toggle" id="sound-toggle" type="button" aria-pressed="true">Sound on</button></label>
             <label class="setting-row"><span>Volume</span><input type="range" id="volume" min="0" max="100"></label>
             <label class="setting-row"><span>Piece height above finger</span><input type="range" id="lift" min="0" max="140"></label>
             <label class="setting-row"><span>Snap assist</span><input type="checkbox" id="snap"></label>
             <label class="setting-row"><span>Animations</span><input type="checkbox" id="anim"></label>
+          </div>
+          <div class="setting-links" aria-label="Project information">
+            <a class="link-button" href="https://github.com/luminivis/blockpuzzle" target="_blank" rel="noopener noreferrer">Code ↗</a>
+            <button class="link-button" type="button" data-info="privacy">Privacy</button>
+            <button class="link-button" type="button" data-info="license">License</button>
           </div>
           <div class="confirm-actions">
             <button class="reset-button" id="reset-settings" type="button">Reset</button>
@@ -564,15 +580,6 @@
           </div>
         </form>
       </dialog>
-      <footer>
-        <span class="footer-links">
-          <a id="personal-link" href="#" target="_blank" rel="noopener noreferrer" hidden>Personal site ↗</a>
-          <a href="https://github.com/luminivis/blockpuzzle" target="_blank" rel="noopener noreferrer">Code</a>
-          <button class="link-button" type="button" data-info="privacy">Privacy</button>
-          <button class="link-button" type="button" data-info="license">License</button>
-        </span>
-        <span class="app-version">v7 · vibe coded with AI</span>
-      </footer>
     </div>
 
     <script>
@@ -584,14 +591,13 @@
           if (hadController) {
             navigator.serviceWorker.addEventListener("controllerchange", () => window.location.reload());
           }
-          navigator.serviceWorker.register("./service-worker.js?v=7", { updateViaCache: "none" })
+          navigator.serviceWorker.register("./service-worker.js?v=8", { updateViaCache: "none" })
             .then(registration => registration.update())
             .catch(error => {
               console.error("Offline support could not be enabled.", error);
             });
         }
 
-        const PERSONAL_SITE_URL = ""; // put your personal site address here, the link stays hidden while it is empty
         const SIZE = 8;
         const COMBO_GRACE = 3; // moves without a clear that you can miss before the combo ends
         const THEME_KEY = "block-puzzle-theme";
@@ -614,7 +620,12 @@
           [[0, 0], [1, 0], [2, 0], [2, 1], [2, 2]],
           [[0, 0], [0, 1], [0, 2], [1, 0], [2, 0]],
           [[0, 0], [0, 1], [0, 2], [1, 1], [2, 1]],
-          [[0, 1], [1, 0], [1, 1], [1, 2], [2, 1]]
+          [[0, 1], [1, 0], [1, 1], [1, 2], [2, 1]],
+          [[0, 0], [0, 1], [0, 2], [1, 0], [1, 1], [1, 2], [2, 0], [2, 1], [2, 2]],
+          [[0, 0], [1, 1], [2, 2]], [[0, 2], [1, 1], [2, 0]],
+          [[0, 0], [1, 1], [2, 2], [3, 3]], [[0, 3], [1, 2], [2, 1], [3, 0]],
+          [[0, 0], [1, 1], [2, 2], [0, 2], [2, 0]],
+          [[0, 0], [0, 1], [0, 2], [1, 0], [1, 2], [2, 0], [2, 1], [2, 2]]
         ];
 
         const boardElement = document.querySelector("#board");
@@ -644,7 +655,7 @@
         let pointerDrag;
         let bestAtStart = 0;
         let draggedButton;
-        let soundEnabled = readPreference("block-puzzle-sound", "off", ["on", "off"]) === "on";
+        let soundEnabled = readPreference("block-puzzle-sound", "on", ["on", "off"]) === "on";
         let theme = readTheme();
         let volume = readNumber("block-puzzle-volume", 70, 0, 100);
         let liftPx = readNumber("block-puzzle-lift", 56, 0, 140);
@@ -652,6 +663,7 @@
         let animationsEnabled = readPreference("block-puzzle-animations", window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ? "off" : "on", ["on", "off"]) === "on";
         let newSet = true;
         let audioContext;
+        let audioBus;
 
         bestElement.textContent = best.toLocaleString();
         applyTheme();
@@ -1244,13 +1256,24 @@
           if (!AudioContextConstructor) return turnOff("Sound is not supported in this browser.");
           try {
             audioContext ??= new AudioContextConstructor();
+            if (!audioBus) {
+              audioBus = audioContext.createGain();
+              const compressor = audioContext.createDynamicsCompressor();
+              compressor.threshold.value = -18;
+              compressor.knee.value = 12;
+              compressor.ratio.value = 4;
+              compressor.attack.value = .004;
+              compressor.release.value = .12;
+              audioBus.connect(compressor);
+              compressor.connect(audioContext.destination);
+            }
           } catch (error) {
             console.warn("Game sound could not be initialized.", error);
             return turnOff("Sound could not be started in this browser.");
           }
           const play = () => {
             const now = audioContext.currentTime;
-            const master = volume / 100 * .13;
+            audioBus.gain.setTargetAtTime(volume / 100 * .32, now, .01);
             const tone = (from, at, length, type = "sine", level = 1, to = from) => {
               const oscillator = audioContext.createOscillator();
               const gain = audioContext.createGain();
@@ -1258,22 +1281,25 @@
               oscillator.frequency.setValueAtTime(from, now + at);
               oscillator.frequency.exponentialRampToValueAtTime(to, now + at + length);
               gain.gain.setValueAtTime(.0001, now + at);
-              gain.gain.exponentialRampToValueAtTime(master * level, now + at + .01);
+              gain.gain.exponentialRampToValueAtTime(level, now + at + .01);
               gain.gain.exponentialRampToValueAtTime(.0001, now + at + length);
               oscillator.connect(gain);
-              gain.connect(audioContext.destination);
+              gain.connect(audioBus);
               oscillator.start(now + at);
               oscillator.stop(now + at + length + .02);
             };
-            if (kind === "pick") tone(620, 0, .05, "sine", .6, 760);
-            if (kind === "place") { tone(210, 0, .13, "triangle", 1.2, 90); tone(1100, 0, .03, "square", .12); }
-            if (kind === "bad") tone(150, 0, .12, "square", .35, 95);
+            if (kind === "pick") { tone(520, 0, .08, "sine", .45, 690); tone(1040, .015, .07, "sine", .12, 1380); }
+            if (kind === "place") { tone(185, 0, .16, "triangle", .75, 78); tone(620, .012, .1, "sine", .2, 320); }
+            if (kind === "bad") { tone(165, 0, .15, "triangle", .35, 105); tone(110, .02, .12, "sine", .25, 82); }
             if (kind === "clear") {
-              const scale = [523, 587, 659, 784, 880, 1047, 1175, 1319];
-              tone(210, 0, .12, "triangle", 1, 90);
-              for (let i = 0; i < Math.min(amount + 2, scale.length); i += 1) tone(scale[i + Math.min(amount - 1, 2)], .05 + i * .06, .22, "triangle", .8);
+              const scale = [523.25, 587.33, 659.25, 783.99, 880, 1046.5, 1174.66, 1318.51];
+              tone(175, 0, .18, "triangle", .65, 75);
+              for (let i = 0; i < Math.min(amount + 2, scale.length); i += 1) {
+                tone(scale[i + Math.min(amount - 1, 2)], .04 + i * .055, .24, "sine", .6);
+                if (i === 0 || i === 2) tone(scale[i + Math.min(amount - 1, 2)] * 1.5, .05 + i * .055, .2, "triangle", .12);
+              }
             }
-            if (kind === "over") [392, 330, 262].forEach((frequency, i) => tone(frequency, i * .16, .3, "sine", .9));
+            if (kind === "over") [392, 329.63, 261.63].forEach((frequency, i) => tone(frequency, i * .16, .32, "triangle", .65));
           };
           if (audioContext.state === "suspended") {
             audioContext.resume().then(play).catch(error => console.warn("Game sound could not be started.", error));
@@ -1463,16 +1489,19 @@
         animInput.addEventListener("change", () => { animationsEnabled = animInput.checked; savePreference("block-puzzle-animations", animationsEnabled ? "on" : "off"); });
         document.querySelector("#reset-settings").addEventListener("click", () => {
           theme = { ...DEFAULT_THEME };
+          soundEnabled = true;
           volume = 70;
           liftPx = 56;
           snapAssist = true;
           animationsEnabled = true;
           try { localStorage.removeItem(THEME_KEY); localStorage.removeItem("block-puzzle-block-color"); } catch (error) { console.warn("Could not clear saved colors.", error); }
           savePreference("block-puzzle-volume", "70");
+          savePreference("block-puzzle-sound", "on");
           savePreference("block-puzzle-lift", "56");
           savePreference("block-puzzle-snap", "on");
           savePreference("block-puzzle-animations", "on");
           applyTheme();
+          updateSoundButton();
           syncSettings();
         });
         document.querySelector("#settings-button").addEventListener("click", () => { syncSettings(); openDialog(settingsDialog); });
@@ -1493,12 +1522,6 @@
           if (document.fullscreenElement || document.webkitFullscreenElement) (document.exitFullscreen || document.webkitExitFullscreen).call(document);
           else requestFullscreen.call(fullscreenRoot);
         });
-        if (PERSONAL_SITE_URL) {
-          const personalLink = document.querySelector("#personal-link");
-          personalLink.href = PERSONAL_SITE_URL;
-          personalLink.hidden = false;
-        }
-
         document.querySelector("#new-game").addEventListener("click", () => {
           const hasProgress = score > 0;
           if (hasProgress) {
@@ -1519,6 +1542,7 @@
           soundEnabled = !soundEnabled;
           savePreference("block-puzzle-sound", soundEnabled ? "on" : "off");
           updateSoundButton();
+          if (soundEnabled) playSound("pick");
         });
       })();
     </script>

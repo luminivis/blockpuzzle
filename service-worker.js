@@ -1,6 +1,6 @@
 "use strict";
 
-const CACHE_NAME = "block-and-bloom-v7";
+const CACHE_NAME = "block-and-bloom-v8";
 const APP_SHELL_URL = new URL("./index.html", self.registration.scope).href;
 const PRIVACY_URL = new URL("./privacy/index.html", self.registration.scope).href;
 const LICENSE_URL = new URL("./LICENSE", self.registration.scope).href;

@@ -9,17 +9,19 @@ It is a work in progress, so there may still be a few rough edges.
 ## How to play
 
 Pick a piece and put it on the 8 by 8 board. Fill a whole row or column to clear
-it. You get three pieces at a time. Each new set is picked so all three pieces
-can be placed one after another when they arrive, but a careless placement can leave you with nowhere to go.
+it. You get three pieces at a time, including lines, corners, 3 by 3 blocks,
+diagonals, and other shapes.
 
 Tap a piece, then tap a spot to place it. You can also drag a piece onto the
 board on a touchscreen or with a mouse. On a touchscreen the piece floats above
 your finger so your hand does not cover it. For keyboard play, press 1, 2 or 3
 (or use Tab) to choose a piece, the arrow keys to pick a spot, and Enter to
-place it. Escape puts a piece back. Open the settings (gear button) to set your own
-background, block and accent colors, change the sound and volume, and tune the
-dragging. Help, privacy and license open as popups, and the full screen button
-fills the display where the browser supports it.
+place it. Escape puts a piece back. Sound is enabled by default; browsers start
+playing it after your first interaction. Open Settings (gear button) to set
+your colors, sound and volume, tune dragging, or read the code, privacy and
+license information. On a wide screen the board sits to the left and the main
+controls are grouped at the right. The full-screen button fills the display
+where the browser supports it.
 
 ## Scores
 
